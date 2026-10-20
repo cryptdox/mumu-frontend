@@ -1,0 +1,89 @@
+@import "tailwindcss";
+@import "mumu-rtc/styles.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Palette (flat UI): Protoss Pylon #00a8ff, Vanadyl Blue #0097e6, Periwinkle #9c88ff,
+ * Matt Purple #8c7ae6, Download Progress #4cd137, Rise-n-Shine #fbc531,
+ * Nasturcian Flower #e84118, Lynx White #f5f6fa, Hint of Pensive #dcdde1,
+ * Chain Gang Grey #718093, Blueberry Soda #7f8fa6, Electromagnetic #2f3640,
+ * Blue Nights #353b48, Pico Void #192a56.
+ */
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface-2: #f0f2f7;
+  --line: #dcdde1;
+  --ink: #2f3640;
+  --muted: #718093;
+  --bubble-in: #ffffff;
+  color-scheme: light;
+}
+.dark {
+  --bg: #20252e;
+  --surface: #2f3640;
+  --surface-2: #353b48;
+  --line: #414856;
+  --ink: #f5f6fa;
+  --muted: #9aa5b8;
+  --bubble-in: #353b48;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-brand: #00a8ff;
+  --color-brand-strong: #0097e6;
+  --color-accent: #9c88ff;
+  --color-accent-strong: #8c7ae6;
+  --color-ok: #4cd137;
+  --color-warn: #fbc531;
+  --color-danger: #e84118;
+  --color-navy: #192a56;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-bubble-in: var(--bubble-in);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid #00a8ff;
+  outline-offset: 2px;
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* mumu-rtc components in our colours */
+:root {
+  --mumu-bg: #192a56;
+  --mumu-tile-bg: #273c75;
+  --mumu-accent: #00a8ff;
+  --mumu-danger: #e84118;
+  --mumu-radius: 18px;
+  --mumu-font: "Plus Jakarta Sans", system-ui, sans-serif;
+}
