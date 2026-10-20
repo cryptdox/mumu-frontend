@@ -113,6 +113,8 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
   await clickText(rafi, "button", "Start live");
   await waitPlaying(rafi, 1);
 
+  // Ayesha watches on a phone-sized screen.
+  await ayesha.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
   await ayesha.goto(`${APP}/live`, { waitUntil: "networkidle2" });
   await ayesha.screenshot({ path: path.join(SHOTS, "5-live-list.png") });
   await clickText(ayesha, "a", "Cooking the chui jhal");
@@ -121,6 +123,17 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
   await ayesha.type('input[aria-label="Live chat message"]', "Smells amazing from here 😋");
   await ayesha.keyboard.press("Enter");
   await rafi.waitForFunction(() => document.body.innerText.includes("Smells amazing from here"), { timeout: 10000 });
+  // Sending a chat message must not black out the stream (keyboard / layout changes).
+  const progressing = async (page) => {
+    const t1 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
+    await new Promise((r) => setTimeout(r, 4500));
+    const t2 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
+    if (!(t2 > t1 + 2)) throw new Error(`stream stalled after chatting (${t1} → ${t2})`);
+  };
+  await progressing(ayesha);
+  // The stream is shown whole, never cropped.
+  const fit = await ayesha.evaluate(() => getComputedStyle(document.querySelector(".mu-live-screen video")).objectFit);
+  if (fit !== "contain") throw new Error(`live video object-fit is ${fit}, expected contain`);
   await rafi.waitForFunction(() => document.body.innerText.includes("Ayesha Rahman"), { timeout: 10000 });
   await rafi.screenshot({ path: path.join(SHOTS, "6-live-host.png") });
   await ayesha.screenshot({ path: path.join(SHOTS, "7-live-viewer.png") });

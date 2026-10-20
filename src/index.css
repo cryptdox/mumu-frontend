@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "mumu-rtc/styles.css";
+/* In the components layer so the app's utilities (and rules below) win over the SDK's defaults. */
+@import "mumu-rtc/styles.css" layer(components);
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -86,4 +87,17 @@ button {
   --mumu-danger: #e84118;
   --mumu-radius: 18px;
   --mumu-font: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+/* Live: the stream fills the stage and is never cropped (a phone's portrait camera stays whole). */
+.mu-live-screen .mumu-tile {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: #000;
+}
+.mu-live-screen .mumu-video {
+  object-fit: contain;
 }

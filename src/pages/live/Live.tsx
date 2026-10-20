@@ -106,6 +106,17 @@ export function LiveHome() {
 
 // ── Watching / hosting ──────────────────────────────────────────────────────
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setMatches(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [query]);
+  return matches;
+}
+
 function useProfileCard(profileId: string) {
   return useQuery({ queryKey: ["profile", profileId], queryFn: () => mu.profiles.get(profileId), staleTime: 5 * 60_000 }).data;
 }
@@ -120,7 +131,7 @@ function ChatLine({ userId, text, isLocal }: { userId: string; text: string; isL
   );
 }
 
-function LiveChat() {
+function LiveChat({ overlay = false }: { overlay?: boolean }) {
   const { messages, send } = useChat();
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -132,8 +143,14 @@ function LiveChat() {
     setText("");
   };
   return (
-    <div className="flex min-h-0 flex-col">
-      <div ref={listRef} className="scrollbar-thin max-h-40 min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 py-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px)] lg:max-h-none">
+    <div className={cx("flex min-h-0 flex-col", !overlay && "flex-1")}>
+      <div
+        ref={listRef}
+        className={cx(
+          "scrollbar-thin min-h-0 space-y-1.5 overflow-y-auto px-4 py-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px)]",
+          overlay ? "max-h-[30dvh] [text-shadow:0_1px_2px_rgb(0_0_0/0.8)]" : "flex-1",
+        )}
+      >
         {messages.map((m, i) => <ChatLine key={i} userId={m.userId} text={m.text} isLocal={m.isLocal} />)}
       </div>
       <form onSubmit={submit} className="flex gap-2 p-3">
@@ -154,10 +171,10 @@ function Screen({ stream }: { stream: LiveStream }) {
   const source = host?.tracks.screen ? "screen" : "camera";
   const showing = stream.status === "LIVE" && host && host.tracks[source] && !host.muted[source];
   return (
-    <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black">
+    <div className="mu-live-screen absolute inset-0 flex items-center justify-center bg-black">
       <AudioRenderer />
       {showing ? (
-        <VideoTile participant={host} source={source} showLabel={false} mirror={host.isLocal && source === "camera"} className="!aspect-auto h-full !max-h-full !rounded-none [&_video]:object-contain" />
+        <VideoTile participant={host} source={source} showLabel={false} mirror={host.isLocal && source === "camera"} />
       ) : (
         <div className="flex flex-col items-center gap-3 text-white/80">
           <Avatar profile={stream.host} size={96} />
@@ -177,6 +194,7 @@ export function LiveRoom() {
   const join = useQuery({ queryKey: ["live-join", id], queryFn: () => mu.live.watch(id), initialData: cached, staleTime: Infinity, gcTime: 0, retry: false });
   const stream = useQuery({ queryKey: ["live", id], queryFn: () => mu.live.get(id), initialData: join.data?.stream, refetchInterval: 30_000 }).data;
   const isHost = stream?.hostProfileId === me.profileId;
+  const wide = useMediaQuery("(min-width: 1024px)");
   const publish = useMemo(() => (isHost ? { camera: true, mic: true } : { camera: false, mic: false }), [isHost]);
 
   useEffect(() => {
@@ -209,9 +227,12 @@ export function LiveRoom() {
   const ended = stream.status === "ENDED";
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-navy text-white lg:flex-row md:static md:z-auto md:flex-1">
+    <div className="fixed inset-0 z-40 flex bg-black text-white md:static md:z-auto md:flex-1">
       <MumuRoom apiUrl={join.data.rtc.apiUrl} token={ended ? null : join.data.rtc.token} publish={publish} onError={(e) => toast(e.message, "error")}>
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* The video always fills this stage; header, controls and (on phones) chat float over it,
+            so a phone keyboard opening for the chat never squeezes the video away. */}
+        <div className="relative min-h-0 min-w-0 flex-1">
+          <Screen stream={stream} />
           <header className="absolute inset-x-0 top-0 z-10 flex items-center gap-3 bg-gradient-to-b from-black/60 to-transparent p-3">
             <IconButton label="Back" onClick={() => navigate("/live")} className="text-white hover:bg-white/10">
               <ArrowLeft className="size-6" />
@@ -231,25 +252,27 @@ export function LiveRoom() {
               </span>
             </span>
           </header>
-          <Screen stream={stream} />
-          {isHost && !ended && (
-            <div className="absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/60 to-transparent pb-3 pt-8">
-              <Controls onLeave={() => end.mutate()} />
-            </div>
-          )}
+          <div className="safe-bottom absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-10">
+            {!ended && !wide && <LiveChat overlay />}
+            {isHost && !ended && (
+              <div className="flex justify-center pb-2">
+                <Controls onLeave={() => end.mutate()} />
+              </div>
+            )}
+            {ended && !isHost && (
+              <div className="p-4 text-center">
+                <Button onClick={() => navigate("/live")}>See who else is live</Button>
+              </div>
+            )}
+          </div>
         </div>
-        {!ended && (
-          <aside className="safe-bottom flex shrink-0 flex-col border-white/10 bg-navy lg:w-80 lg:border-l">
-            <p className="hidden px-4 pt-4 text-sm font-semibold lg:block">Live chat</p>
+        {!ended && wide && (
+          <aside className="flex w-80 shrink-0 flex-col border-l border-white/10 bg-navy">
+            <p className="px-4 pt-4 text-sm font-semibold">Live chat</p>
             <LiveChat />
           </aside>
         )}
       </MumuRoom>
-      {ended && !isHost && (
-        <div className="absolute inset-x-0 bottom-0 p-4 text-center lg:static">
-          <Button onClick={() => navigate("/live")}>See who else is live</Button>
-        </div>
-      )}
     </div>
   );
 }
