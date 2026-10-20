@@ -183,6 +183,39 @@ await step("live: a non-follower can't see it; ending it tells the viewer", asyn
   await ayesha.screenshot({ path: path.join(SHOTS, "8-live-ended.png") });
 });
 
+await step("live on two devices: the second device asks, takes over, the first steps off, viewers keep watching", async () => {
+  await rafi.evaluate((pid) => {
+    const s = JSON.parse(localStorage.getItem("mu.session"));
+    localStorage.setItem("mu.session", JSON.stringify({ ...s, profileId: pid }));
+  }, bites.profileId);
+  await rafi.goto(`${APP}/live`, { waitUntil: "networkidle2" });
+  await clickText(rafi, "button", "Go live");
+  await rafi.waitForSelector('input[placeholder="What\'s this live about?"]');
+  await rafi.type('input[placeholder="What\'s this live about?"]', "Second device test");
+  await clickText(rafi, "button", "Start live");
+  await waitPlaying(rafi, 1);
+  const liveUrl = rafi.url();
+
+  await ayesha.goto(liveUrl, { waitUntil: "networkidle2" });
+  await waitPlaying(ayesha, 1);
+
+  // Same account, another browser = another device.
+  const rafi2 = await personPage("rafi", { profileId: bites.profileId });
+  await rafi2.goto(liveUrl, { waitUntil: "networkidle2" });
+  await rafi2.waitForFunction(() => document.body.innerText.includes("You're live on another device"), { timeout: 10000 });
+  await rafi2.screenshot({ path: path.join(SHOTS, "9-live-other-device-prompt.png") });
+  await clickText(rafi2, "button", "Go live from here");
+  await waitPlaying(rafi2, 1);
+  await rafi.waitForFunction(() => location.pathname === "/live", { timeout: 10000 }).catch(() => {
+    throw new Error("the first device didn't step off the live");
+  });
+  await rafi.screenshot({ path: path.join(SHOTS, "10-first-device-after-takeover.png") });
+  await ayesha.waitForFunction(() => { const v = document.querySelector(".mu-live-screen video"); return v && v.videoWidth > 0 && !v.paused; }, { timeout: 30000 })
+    .catch(() => { throw new Error("viewer lost the stream after the takeover"); });
+  await rafi2.click(".mumu-btn--leave");
+  await ayesha.waitForFunction(() => document.body.innerText.includes("This live has ended"), { timeout: 10000 });
+});
+
 await browser.close();
 console.log(failed ? `\n${failed} step(s) failed` : "\nAll steps passed");
 process.exit(failed ? 1 : 0);
