@@ -63,7 +63,13 @@ export function LiveHome() {
     <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
       <TopBar title="Live" onAvatar={openSwitcher}>
         {mine ? (
-          <Link to={`/live/${mine.liveStreamId}`}><Button size="sm" variant="danger">Back to your live</Button></Link>
+          <Link to={`/live/${mine.liveStreamId}`}>
+            {mine.onThisDevice === false ? (
+              <Button size="sm" variant="secondary">Live on another device</Button>
+            ) : (
+              <Button size="sm" variant="danger">Back to your live</Button>
+            )}
+          </Link>
         ) : (
           <Button size="sm" variant="danger" onClick={() => setOpen(true)}>
             <Radio className="size-4" /> Go live

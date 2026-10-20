@@ -129,6 +129,8 @@ export interface LiveStream {
   startedAt: string;
   endedAt: string | null;
   postId: string | null;
+  /** Only on your own live in the list: broadcasting from this device? */
+  onThisDevice?: boolean;
 }
 
 export type NotificationType =
