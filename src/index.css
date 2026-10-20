@@ -101,3 +101,13 @@ button {
 .mu-live-screen .mumu-video {
   object-fit: contain;
 }
+
+/* Live chat: new lines slide up into place; the full chat slides in from the right. */
+@keyframes mu-chat-in {
+  from { transform: translateY(8px); opacity: 0; }
+}
+.mu-chat-in { animation: mu-chat-in 0.25s ease-out; }
+@keyframes mu-drawer-in {
+  from { transform: translateX(100%); }
+}
+.mu-drawer-in { animation: mu-drawer-in 0.22s ease-out; }

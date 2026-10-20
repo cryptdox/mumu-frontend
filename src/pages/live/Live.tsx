@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AudioRenderer, Controls, MumuRoom, VideoTile, useChat, useParticipants, useRoom } from "mumu-rtc/react";
-import { ArrowLeft, Eye, Radio, SendHorizontal, Users } from "lucide-react";
+import { ArrowLeft, Eye, MessageCircle, Radio, SendHorizontal, Users, X } from "lucide-react";
 import { mu } from "@/api/mu";
 import type { Audience, LiveStream, RtcJoin } from "@/api/types";
 import { useProfile } from "@/lib/auth";
@@ -131,35 +131,107 @@ function ChatLine({ userId, text, isLocal }: { userId: string; text: string; isL
   );
 }
 
-function LiveChat({ overlay = false }: { overlay?: boolean }) {
-  const { messages, send } = useChat();
+function ChatForm({ onSend, autoFocus }: { onSend: (text: string) => void; autoFocus?: boolean }) {
   const [text, setText] = useState("");
-  const listRef = useRef<HTMLDivElement>(null);
-  useEffect(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), [messages.length]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
-    void send(text.trim().slice(0, 500));
+    onSend(text.trim().slice(0, 500));
     setText("");
   };
   return (
-    <div className={cx("flex min-h-0 flex-col", !overlay && "flex-1")}>
-      <div
-        ref={listRef}
-        className={cx(
-          "scrollbar-thin min-h-0 space-y-1.5 overflow-y-auto px-4 py-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px)]",
-          overlay ? "max-h-[30dvh] [text-shadow:0_1px_2px_rgb(0_0_0/0.8)]" : "flex-1",
-        )}
-      >
-        {messages.map((m, i) => <ChatLine key={i} userId={m.userId} text={m.text} isLocal={m.isLocal} />)}
+    <form onSubmit={submit} className="flex min-w-0 flex-1 gap-2">
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        maxLength={500}
+        autoFocus={autoFocus}
+        placeholder="Say something…"
+        aria-label="Live chat message"
+        className="h-10 min-w-0 flex-1 rounded-full bg-white/15 px-4 text-sm text-white outline-none backdrop-blur placeholder:text-white/60 focus:bg-white/20 focus-visible:outline-none"
+      />
+      <IconButton type="submit" label="Send" className="bg-brand text-white hover:bg-brand-strong" disabled={!text.trim()}>
+        <SendHorizontal className="size-4" />
+      </IconButton>
+    </form>
+  );
+}
+
+/** Full chat history (side panel on wide screens, right-hand drawer on phones). */
+function ChatHistory() {
+  const { messages, send } = useChat();
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), [messages.length]);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={listRef} className="scrollbar-thin min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
+        {messages.length ? messages.map((m, i) => <ChatLine key={i} userId={m.userId} text={m.text} isLocal={m.isLocal} />) : <p className="pt-8 text-center text-sm text-white/50">No messages yet — say hi 👋</p>}
       </div>
-      <form onSubmit={submit} className="flex gap-2 p-3">
-        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={500} placeholder="Say something…" aria-label="Live chat message" className="h-10 min-w-0 flex-1 rounded-full bg-white/15 px-4 text-sm text-white outline-none placeholder:text-white/60 focus:bg-white/20 focus-visible:outline-none" />
-        <IconButton type="submit" label="Send" className="bg-brand text-white hover:bg-brand-strong" disabled={!text.trim()}>
-          <SendHorizontal className="size-4" />
-        </IconButton>
-      </form>
+      <div className="safe-bottom flex p-3">
+        <ChatForm onSend={(t) => void send(t)} />
+      </div>
     </div>
+  );
+}
+
+/**
+ * Phone overlay: the latest few messages float at the bottom of the video, new ones slide in
+ * and older ones fade away. Tapping them (or the chat button) opens the full chat on the right.
+ */
+function ChatOverlay() {
+  const { messages, send } = useChat();
+  const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const recent = messages.slice(-4);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open live chat"
+        className="block w-full space-y-1.5 px-4 pb-2 text-left [mask-image:linear-gradient(to_bottom,transparent,black_28px)] [text-shadow:0_1px_2px_rgb(0_0_0/0.8)]"
+      >
+        {recent.map((m, i) => {
+          const age = (now - new Date(m.at).getTime()) / 1000;
+          // Newest is fully visible; older lines and anything older than ~8 s fade back.
+          const opacity = age > 12 ? 0.25 : age > 8 ? 0.5 : 1 - (recent.length - 1 - i) * 0.18;
+          return (
+            <div key={messages.length - recent.length + i} className="mu-chat-in transition-opacity duration-700" style={{ opacity }}>
+              <ChatLine userId={m.userId} text={m.text} isLocal={m.isLocal} />
+            </div>
+          );
+        })}
+      </button>
+      <div className="flex items-center gap-2 px-3 pb-3">
+        <IconButton label="Open live chat" onClick={() => setOpen(true)} className="relative bg-white/15 text-white backdrop-blur hover:bg-white/25">
+          <MessageCircle className="size-5" />
+          {messages.length > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-brand px-1 text-[10px] font-bold leading-4">{messages.length > 99 ? "99+" : messages.length}</span>}
+        </IconButton>
+        <ChatForm onSend={(t) => void send(t)} />
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setOpen(false)}>
+          <aside
+            role="dialog"
+            aria-label="Live chat"
+            onClick={(e) => e.stopPropagation()}
+            className="mu-drawer-in flex h-full w-[85%] max-w-sm flex-col bg-navy/95 text-white shadow-2xl backdrop-blur"
+          >
+            <div className="flex items-center justify-between px-4 pt-3">
+              <p className="font-semibold">Live chat</p>
+              <IconButton label="Close chat" onClick={() => setOpen(false)} className="text-white hover:bg-white/10">
+                <X className="size-5" />
+              </IconButton>
+            </div>
+            <ChatHistory />
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -168,6 +240,10 @@ function Screen({ stream }: { stream: LiveStream }) {
   const { state, error } = useRoom();
   const failure = state !== "connected" && state !== "connecting" && state !== "reconnecting" ? rtcErrorText(error) : null;
   const host = participants.find((p) => p.userId === stream.hostProfileId);
+  const hostHere = !!host;
+  useEffect(() => {
+    if (!hostHere && state === "connected") void queryClient.invalidateQueries({ queryKey: ["live", stream.liveStreamId] });
+  }, [hostHere, state, stream.liveStreamId]);
   const source = host?.tracks.screen ? "screen" : "camera";
   const showing = stream.status === "LIVE" && host && host.tracks[source] && !host.muted[source];
   return (
@@ -253,7 +329,7 @@ export function LiveRoom() {
             </span>
           </header>
           <div className="safe-bottom absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-10">
-            {!ended && !wide && <LiveChat overlay />}
+            {!ended && !wide && <ChatOverlay />}
             {isHost && !ended && (
               <div className="flex justify-center pb-2">
                 <Controls onLeave={() => end.mutate()} />
@@ -269,7 +345,7 @@ export function LiveRoom() {
         {!ended && wide && (
           <aside className="flex w-80 shrink-0 flex-col border-l border-white/10 bg-navy">
             <p className="px-4 pt-4 text-sm font-semibold">Live chat</p>
-            <LiveChat />
+            <ChatHistory />
           </aside>
         )}
       </MumuRoom>

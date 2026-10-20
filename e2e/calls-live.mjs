@@ -123,6 +123,7 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
   await ayesha.type('input[aria-label="Live chat message"]', "Smells amazing from here 😋");
   await ayesha.keyboard.press("Enter");
   await rafi.waitForFunction(() => document.body.innerText.includes("Smells amazing from here"), { timeout: 10000 });
+  await rafi.waitForFunction(() => document.body.innerText.includes("Ayesha Rahman"), { timeout: 10000 });
   // Sending a chat message must not black out the stream (keyboard / layout changes).
   const progressing = async (page) => {
     const t1 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
@@ -131,11 +132,38 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
     if (!(t2 > t1 + 2)) throw new Error(`stream stalled after chatting (${t1} → ${t2})`);
   };
   await progressing(ayesha);
+  await ayesha.screenshot({ path: path.join(SHOTS, "7a-viewer-chat-overlay.png") });
+  // Tapping the chat opens the full history from the right; the video keeps playing behind it.
+  await ayesha.click('button[aria-label="Open live chat"]');
+  await ayesha.waitForSelector('aside[aria-label="Live chat"]');
+  await ayesha.screenshot({ path: path.join(SHOTS, "7b-viewer-chat-drawer.png") });
+  await progressing(ayesha);
+  await ayesha.click('button[aria-label="Close chat"]');
+  // The host chatting must not black out the stream either — on desktop and on a phone.
+  for (const viewport of [null, { width: 390, height: 844, isMobile: true, hasTouch: true }]) {
+    if (viewport) await rafi.setViewport(viewport);
+    await rafi.waitForSelector('input[aria-label="Live chat message"]');
+    await rafi.type('input[aria-label="Live chat message"]', `Thanks for watching ${viewport ? "📱" : "💻"}`);
+    await rafi.keyboard.press("Enter");
+    await ayesha.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 10000 }, `Thanks for watching ${viewport ? "📱" : "💻"}`);
+    await progressing(rafi).catch((e) => { throw new Error(`host view (${viewport ? "phone" : "desktop"}): ${e.message}`); });
+    await progressing(ayesha).catch((e) => { throw new Error(`viewer after host chat (${viewport ? "phone" : "desktop"}): ${e.message}`); });
+    await rafi.screenshot({ path: path.join(SHOTS, `6b-host-after-chat-${viewport ? "phone" : "desktop"}.png`) });
+    console.log(`  after host chat (${viewport ? "phone" : "desktop"}) — viewer:`, JSON.stringify(await ayesha.evaluate(() => ({ video: !!document.querySelector(".mu-live-screen video"), text: document.querySelector(".mu-live-screen")?.innerText ?? "" }))));
+  }
+  // Switching puppeteer back from a phone viewport reloads the page — i.e. the host reloads
+  // mid-live. The host must come back on air and the viewer must get the stream again.
+  await rafi.setViewport({ width: 1100, height: 760 });
+  await waitPlaying(rafi, 1, 30000).catch((e) => { throw new Error(`host didn't come back after reload: ${e.message}`); });
+  await ayesha.waitForFunction(() => { const v = document.querySelector(".mu-live-screen video"); return v && v.videoWidth > 0; }, { timeout: 30000 })
+    .catch(() => { throw new Error("viewer didn't get the stream back after the host reloaded"); });
+  await progressing(ayesha);
   // The stream is shown whole, never cropped.
+  const state = async (page) => page.evaluate(() => ({ video: !!document.querySelector(".mu-live-screen video"), text: document.querySelector(".mu-live-screen")?.innerText ?? "" }));
+  console.log("  after host chat — viewer:", JSON.stringify(await state(ayesha)), "host:", JSON.stringify(await state(rafi)));
   const fit = await ayesha.evaluate(() => getComputedStyle(document.querySelector(".mu-live-screen video")).objectFit);
   if (fit !== "contain") throw new Error(`live video object-fit is ${fit}, expected contain`);
-  await rafi.waitForFunction(() => document.body.innerText.includes("Ayesha Rahman"), { timeout: 10000 });
-  await rafi.screenshot({ path: path.join(SHOTS, "6-live-host.png") });
+  await rafi.screenshot({ path: path.join(SHOTS, "6-live-host-after-reload.png") });
   await ayesha.screenshot({ path: path.join(SHOTS, "7-live-viewer.png") });
 });
 
