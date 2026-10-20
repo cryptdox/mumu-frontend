@@ -35,16 +35,18 @@ const step = async (name, fn) => {
   }
 };
 
-async function personPage(handle, extra = {}) {
+// Each person gets a stable device id per "device" (the app limits accounts to 3 devices).
+async function personPage(handle, extra = {}, device = "main") {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   await page.setViewport({ width: 1100, height: 760 });
   page.on("pageerror", (e) => console.log(`  [${handle}] page error: ${e.message}`));
   await page.goto(`${APP}/login`);
-  await page.evaluate((s) => {
+  await page.evaluate((s, dev) => {
     localStorage.setItem("mu.session", JSON.stringify(s));
     localStorage.setItem("mu.theme", "light");
-  }, { ...sessions[handle], ...extra });
+    localStorage.setItem("mu.device", dev);
+  }, { ...sessions[handle], ...extra }, `e2e-${handle}-${device}`.replace(/[^A-Za-z0-9_-]/g, "-"));
   await page.goto(`${APP}/chats`, { waitUntil: "networkidle2" });
   return page;
 }
@@ -200,18 +202,31 @@ await step("live on two devices: the second device asks, takes over, the first s
   await waitPlaying(ayesha, 1);
 
   // Same account, another browser = another device.
-  const rafi2 = await personPage("rafi", { profileId: bites.profileId });
+  const rafi2 = await personPage("rafi", { profileId: bites.profileId }, "second");
   await rafi2.goto(liveUrl, { waitUntil: "networkidle2" });
   await rafi2.waitForFunction(() => document.body.innerText.includes("You're live on another device"), { timeout: 10000 });
   await rafi2.screenshot({ path: path.join(SHOTS, "9-live-other-device-prompt.png") });
+  const trackBefore = await ayesha.evaluate(() => document.querySelector(".mu-live-screen video")?.srcObject?.getVideoTracks()[0]?.id);
+  const t0 = Date.now();
   await clickText(rafi2, "button", "Go live from here");
+  // The viewer switches to the new device's video (a different track) and it plays.
+  await ayesha.waitForFunction((before) => {
+    const v = document.querySelector(".mu-live-screen video");
+    const id = v?.srcObject?.getVideoTracks()[0]?.id;
+    return id && id !== before && v.videoWidth > 0 && !v.paused;
+  }, { timeout: 15000 }, trackBefore).catch(() => { throw new Error("viewer didn't switch to the new device's video within 15 s"); });
+  console.log(`  viewer switched to the new device in ${Date.now() - t0} ms`);
   await waitPlaying(rafi2, 1);
   await rafi.waitForFunction(() => location.pathname === "/live", { timeout: 10000 }).catch(() => {
     throw new Error("the first device didn't step off the live");
   });
   await rafi.screenshot({ path: path.join(SHOTS, "10-first-device-after-takeover.png") });
   await ayesha.waitForFunction(() => { const v = document.querySelector(".mu-live-screen video"); return v && v.videoWidth > 0 && !v.paused; }, { timeout: 30000 })
-    .catch(() => { throw new Error("viewer lost the stream after the takeover"); });
+    .catch(async () => {
+      const info = await ayesha.evaluate(() => ({ url: location.pathname, screen: document.querySelector(".mu-live-screen")?.innerText, videos: [...document.querySelectorAll("video")].map((v) => `${v.videoWidth}x${v.videoHeight}${v.paused ? " paused" : ""}${v.classList.contains("mumu-hidden") ? " hidden" : ""}`) }));
+      await ayesha.screenshot({ path: path.join(SHOTS, "x-viewer-after-takeover.png") });
+      throw new Error(`viewer lost the stream after the takeover: ${JSON.stringify(info)}`);
+    });
   await rafi2.click(".mumu-btn--leave");
   await ayesha.waitForFunction(() => document.body.innerText.includes("This live has ended"), { timeout: 10000 });
 });

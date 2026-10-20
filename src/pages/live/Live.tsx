@@ -277,12 +277,15 @@ export function LiveRoom() {
   const elsewhere = errorCode(join.error) === "LIVE_ON_OTHER_DEVICE";
   // …and if another of your devices takes this live over, step off it here.
   const moved = useStore(liveTakeoverStore);
+  const hosting = join.data?.rtc.role === "HOST";
   useEffect(() => {
     if (moved?.liveStreamId !== id) return;
     liveTakeoverStore.set(null);
+    // Only the device that was broadcasting steps off — viewers (even the page's team) stay.
+    if (!hosting) return;
     toast("Your live continues on your other device");
     navigate("/live", { replace: true });
-  }, [moved, id, navigate]);
+  }, [moved, id, navigate, hosting]);
   const stream = useQuery({ queryKey: ["live", id], queryFn: () => mu.live.get(id), initialData: join.data?.stream, refetchInterval: 30_000 }).data;
   const isHost = stream?.hostProfileId === me.profileId;
   const wide = useMediaQuery("(min-width: 1024px)");
