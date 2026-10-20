@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import type {
-  Account, Audience, CallInfo, Comment, Conversation, LiveStream, Media, Message, MyProfile,
+  Account, Audience, Device, CallInfo, Comment, Conversation, LiveStream, Media, Message, MyProfile,
   Notification, Post, Profile, ProfileCard, ProfileView, ReactionType, RtcJoin,
 } from "./types";
 
@@ -8,6 +8,8 @@ const before = (cursor?: string) => (cursor ? { before: cursor } : {});
 
 export const mu = {
   me: () => api<Account>("/api/me"),
+  devices: () => api<{ max: number; devices: Device[] }>("/api/me/devices"),
+  signOutDevice: (id: string) => api<void>(`/api/me/devices/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   profiles: {
     get: (idOrHandle: string) => api<ProfileView>(`/api/profiles/${encodeURIComponent(idOrHandle)}`),
@@ -85,7 +87,7 @@ export const mu = {
     list: () => api<LiveStream[]>("/api/live"),
     get: (id: string) => api<LiveStream>(`/api/live/${id}`),
     start: (title: string, audience: Audience) => api<{ stream: LiveStream; rtc: RtcJoin }>("/api/live", { method: "POST", body: { title, audience } }),
-    watch: (id: string) => api<{ stream: LiveStream; rtc: RtcJoin }>(`/api/live/${id}/watch`, { method: "POST" }),
+    watch: (id: string, takeover = false) => api<{ stream: LiveStream; rtc: RtcJoin }>(`/api/live/${id}/watch`, { method: "POST", body: { takeover } }),
     leave: (id: string) => api<LiveStream>(`/api/live/${id}/leave`, { method: "POST" }),
     end: (id: string) => api<LiveStream>(`/api/live/${id}/end`, { method: "POST" }),
   },

@@ -4,7 +4,8 @@ import type { InfiniteData } from "@tanstack/react-query";
 import { config } from "@/config";
 import { queryClient } from "./query";
 import { refreshOnce } from "./api";
-import { getAccessToken, useAuth } from "./auth";
+import { endSessionHere, getAccessToken, useAuth } from "./auth";
+import { deviceId } from "./device";
 import { createStore } from "./store";
 import type { CallInfo, Conversation, LiveStream, Message, RtcJoin } from "@/api/types";
 
@@ -15,6 +16,8 @@ export const typingStore = createStore<Record<string, string[]>>({});
 /** A call ringing for you, and the call you're in. */
 export const callStore = createStore<{ incoming: CallInfo | null; active: { call: CallInfo; rtc: RtcJoin } | null }>({ incoming: null, active: null });
 export const unreadStore = createStore({ notifications: 0 });
+/** Set when one of your lives moved to another of your devices. */
+export const liveTakeoverStore = createStore<{ liveStreamId: string } | null>(null);
 
 const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function markTyping(conversationId: string, profileId: string) {
@@ -58,7 +61,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const s = io(config.apiUrl, {
       transports: ["websocket"],
       // Read the token on every (re)connect — it's refreshed in the background.
-      auth: (cb) => cb({ token: getAccessToken() }),
+      auth: (cb) => cb({ token: getAccessToken(), deviceId: deviceId() }),
     });
 
     s.on("connect_error", async (err) => {
@@ -101,6 +104,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         incoming: c.incoming?.callId === call.callId && call.status !== "RINGING" ? null : c.incoming,
         active: c.active?.call.callId === call.callId ? (["ENDED", "MISSED"].includes(call.status) ? null : { ...c.active, call }) : c.active,
       }));
+    });
+
+    s.on("live:takeover", (t: { liveStreamId: string; deviceId: string }) => {
+      if (t.deviceId !== deviceId()) liveTakeoverStore.set({ liveStreamId: t.liveStreamId });
+    });
+    s.on("device:signed-out", (d: { deviceId: string }) => {
+      if (d.deviceId === deviceId()) endSessionHere();
     });
 
     s.on("live:updated", (stream: LiveStream) => {

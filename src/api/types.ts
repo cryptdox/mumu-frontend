@@ -143,3 +143,11 @@ export interface Notification {
   createdAt: string;
   readAt: string | null;
 }
+
+export interface Device {
+  deviceId: string;
+  label: string;
+  signedInAt: string;
+  lastSeenAt: string;
+  current: boolean;
+}

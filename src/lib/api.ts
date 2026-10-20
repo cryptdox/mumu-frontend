@@ -1,4 +1,5 @@
 import { config } from "@/config";
+import { deviceId } from "./device";
 
 /** Error carrying the HTTP status and the API's message / details. */
 export class ApiError extends Error {
@@ -28,6 +29,8 @@ interface TokenHooks {
   refresh: () => Promise<string | null>;
   /** Profile to act as (x-profile-id) on MuMu API calls. */
   getProfileId: () => string | null;
+  /** This device was signed out (from another device) — end the session here. */
+  onDeviceSignedOut?: () => void;
 }
 
 let hooks: TokenHooks = { getAccessToken: () => null, refresh: async () => null, getProfileId: () => null };
@@ -56,6 +59,7 @@ async function send<T>(base: string, path: string, opts: RequestOptions, token: 
       ...(opts.body !== undefined && { "content-type": "application/json" }),
       ...(token && { authorization: `Bearer ${token}` }),
       ...(profileId && { "x-profile-id": profileId }),
+      ...(base === config.apiUrl && { "x-device-id": deviceId() }),
       ...opts.headers,
     },
     body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
@@ -77,6 +81,10 @@ async function request<T>(base: string, path: string, opts: RequestOptions, with
   try {
     return await send<T>(base, path, opts, token, profileId);
   } catch (err) {
+    if (err instanceof ApiError && errorCode(err) === "DEVICE_SIGNED_OUT") {
+      hooks.onDeviceSignedOut?.();
+      throw err;
+    }
     if (!(err instanceof ApiError) || err.status !== 401 || !useAuth || !token) throw err;
     const fresh = await refreshOnce();
     if (!fresh) throw err;
@@ -98,4 +106,10 @@ export function errorMessage(err: unknown): string {
   }
   if (err instanceof TypeError) return "You're offline or the server can't be reached.";
   return err instanceof Error ? err.message : String(err);
+}
+
+/** The API's machine-readable error code (e.g. "DEVICE_LIMIT", "LIVE_ON_OTHER_DEVICE"). */
+export function errorCode(err: unknown): string | undefined {
+  if (!(err instanceof ApiError) || !err.errors || Array.isArray(err.errors)) return undefined;
+  return (err.errors as { code?: string }).code;
 }

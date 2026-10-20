@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { iam, setTokenHooks } from "./api";
+import { api, iam, setTokenHooks } from "./api";
+import { deviceId } from "./device";
 import { queryClient } from "./query";
 import { config } from "@/config";
 import { mu } from "@/api/mu";
@@ -68,6 +69,7 @@ if (typeof window !== "undefined") {
 setTokenHooks({
   getAccessToken: () => current?.accessToken ?? null,
   getProfileId: () => current?.profileId ?? null,
+  onDeviceSignedOut: () => setSession(null),
   refresh: async () => {
     const s = current;
     if (!s) return null;
@@ -83,6 +85,8 @@ setTokenHooks({
 });
 
 export const getAccessToken = () => current?.accessToken ?? null;
+/** Signed out from another device (socket push or a 401 DEVICE_SIGNED_OUT). */
+export const endSessionHere = () => setSession(null);
 export const accessCodeHeader = () => ({ "x-cr-access-code": config.iamAccessCode });
 
 // ── React binding ───────────────────────────────────────────────────────────
@@ -134,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      // Free this device's slot (max 3 devices), then end the IAM session.
+      if (current) await api(`/api/me/devices/${deviceId()}`, { method: "DELETE" }).catch(() => {});
       if (current) await iam("/api/auth/logout", { method: "POST" });
     } catch {
       // already invalid — clear locally anyway
