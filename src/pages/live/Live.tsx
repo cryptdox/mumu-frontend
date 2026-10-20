@@ -7,9 +7,10 @@ import { mu } from "@/api/mu";
 import type { Audience, LiveStream, RtcJoin } from "@/api/types";
 import { useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
-import { useSocket } from "@/lib/realtime";
+import { liveTakeoverStore, useSocket } from "@/lib/realtime";
+import { useStore } from "@/lib/store";
 import { compact, shortTime } from "@/lib/format";
-import { errorMessage } from "@/lib/api";
+import { errorCode, errorMessage } from "@/lib/api";
 import { rtcErrorText } from "@/lib/rtcError";
 import { AudiencePicker, AudienceIcon, Avatar, Button, Empty, ErrorNote, IconButton, Input, Loading, Name, Sheet, audienceLabel, cx, toast, toastError } from "@/components/ui";
 import { TopBar } from "@/components/layout";
@@ -50,7 +51,7 @@ export function LiveHome() {
     mutationFn: () => mu.live.start(title.trim(), audience),
     onSuccess: ({ stream, rtc }) => {
       queryClient.setQueryData(["live", stream.liveStreamId], stream);
-      queryClient.setQueryData(["live-join", stream.liveStreamId], { stream, rtc });
+      queryClient.setQueryData(["live-join", stream.liveStreamId, false], { stream, rtc });
       setOpen(false);
       navigate(`/live/${stream.liveStreamId}`);
     },
@@ -266,8 +267,19 @@ export function LiveRoom() {
   const me = useProfile();
   const navigate = useNavigate();
   const socket = useSocket();
-  const cached = queryClient.getQueryData<{ stream: LiveStream; rtc: RtcJoin }>(["live-join", id]);
-  const join = useQuery({ queryKey: ["live-join", id], queryFn: () => mu.live.watch(id), initialData: cached, staleTime: Infinity, gcTime: 0, retry: false });
+  // Your own live open on another device: ask before moving it here.
+  const [takeover, setTakeover] = useState(false);
+  const cached = queryClient.getQueryData<{ stream: LiveStream; rtc: RtcJoin }>(["live-join", id, false]);
+  const join = useQuery({ queryKey: ["live-join", id, takeover], queryFn: () => mu.live.watch(id, takeover), initialData: takeover ? undefined : cached, staleTime: Infinity, gcTime: 0, retry: false });
+  const elsewhere = errorCode(join.error) === "LIVE_ON_OTHER_DEVICE";
+  // …and if another of your devices takes this live over, step off it here.
+  const moved = useStore(liveTakeoverStore);
+  useEffect(() => {
+    if (moved?.liveStreamId !== id) return;
+    liveTakeoverStore.set(null);
+    toast("Your live continues on your other device");
+    navigate("/live", { replace: true });
+  }, [moved, id, navigate]);
   const stream = useQuery({ queryKey: ["live", id], queryFn: () => mu.live.get(id), initialData: join.data?.stream, refetchInterval: 30_000 }).data;
   const isHost = stream?.hostProfileId === me.profileId;
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -292,6 +304,27 @@ export function LiveRoom() {
   });
 
   if (join.isLoading) return <div className="flex flex-1 bg-navy"><Loading label="Joining…" /></div>;
+  if (elsewhere) {
+    return (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-navy p-6 text-white md:static md:z-auto md:flex-1">
+        <div className="w-full max-w-sm rounded-3xl bg-white/10 p-6 text-center backdrop-blur">
+          <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-danger/90">
+            <Radio className="size-7" />
+          </span>
+          <h2 className="text-lg font-bold">You're live on another device</h2>
+          <p className="mt-1 text-sm text-white/70">Continue the live here? Your other device will stop broadcasting.</p>
+          <div className="mt-5 grid gap-2">
+            <Button variant="danger" onClick={() => setTakeover(true)}>
+              <Radio className="size-4" /> Go live from here
+            </Button>
+            <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => navigate("/live", { replace: true })}>
+              Not now
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (join.error || !join.data || !stream) {
     return (
       <div className="flex flex-1 flex-col">
