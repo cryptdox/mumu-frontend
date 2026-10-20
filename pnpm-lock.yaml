@@ -18,8 +18,8 @@ importers:
         specifier: ^1.60.0
         version: 1.60.0(@types/react@19.3.0)(react@19.3.1)
       mumu-rtc:
-        specifier: ^0.1.0
-        version: 0.1.0(react@19.3.1)
+        specifier: ^0.1.1
+        version: 0.1.1(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -1892,8 +1892,8 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  mumu-rtc@0.1.0:
-    resolution: {integrity: sha512-xm1jU+bc4bfrEvdKxk/pyduWHoD2nfS01Am1En+9yo8GRoLfHD7gB7Y38lUZatyHQ9j/O51J3yI7Ow/lA3XTHw==}
+  mumu-rtc@0.1.1:
+    resolution: {integrity: sha512-ZIeaKcBGa/TIm83yRXhext2HbJF1BbXUtIReYiiCoh65RQXCfXL17btBjljFSH9qDwW5wGCY3ZG+msNZuizyuw==}
     peerDependencies:
       react: '>=18'
     peerDependenciesMeta:
@@ -4293,7 +4293,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  mumu-rtc@0.1.0(react@19.3.1):
+  mumu-rtc@0.1.1(react@19.3.1):
     dependencies:
       mediasoup-client: 3.25.1
     optionalDependencies:
