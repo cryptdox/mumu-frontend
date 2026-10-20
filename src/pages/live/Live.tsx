@@ -240,7 +240,10 @@ function Screen({ stream }: { stream: LiveStream }) {
   const participants = useParticipants();
   const { state, error } = useRoom();
   const failure = state !== "connected" && state !== "connecting" && state !== "reconnecting" ? rtcErrorText(error) : null;
-  const host = participants.find((p) => p.userId === stream.hostProfileId);
+  // During a device takeover the host can briefly be in the room twice: show your own
+  // camera if you're the host, otherwise the newest host connection.
+  const hosts = participants.filter((p) => p.userId === stream.hostProfileId);
+  const host = hosts.find((p) => p.isLocal) ?? hosts[hosts.length - 1];
   const hostHere = !!host;
   useEffect(() => {
     if (!hostHere && state === "connected") void queryClient.invalidateQueries({ queryKey: ["live", stream.liveStreamId] });

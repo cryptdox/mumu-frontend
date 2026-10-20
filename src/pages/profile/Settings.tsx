@@ -9,6 +9,7 @@ import { IMAGE_ACCEPT, prepareImage } from "@/lib/image";
 import { setTheme, themeStore, type Theme } from "@/lib/theme";
 import { useStore } from "@/lib/store";
 import { Avatar, Button, IconButton, Input, Name, Tabs, Textarea, cx, toast, toastError } from "@/components/ui";
+import { DevicesCard } from "./Devices";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -174,6 +175,7 @@ export default function SettingsPage() {
             ))}
           </div>
         </Card>
+        <DevicesCard />
         <Card title="Blocked">
           {blocks.data?.length ? (
             blocks.data.map((b) => (

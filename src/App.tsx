@@ -2,7 +2,8 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { RealtimeProvider } from "@/lib/realtime";
-import { ApiError, errorMessage } from "@/lib/api";
+import { ApiError, errorCode, errorMessage } from "@/lib/api";
+import { DeviceLimit } from "@/pages/profile/Devices";
 import { AppShell } from "@/components/layout";
 import { Button, Loading } from "@/components/ui";
 import { ForgotPassword, Login, Register, ResetPassword, VerifyEmail } from "@/pages/auth/Auth";
@@ -23,6 +24,7 @@ function RequireAccount() {
   const location = useLocation();
   const me = useQuery({ queryKey: ["me", user?.userId], queryFn: mu.me, enabled: !!user, staleTime: 60_000 });
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (me.error && errorCode(me.error) === "DEVICE_LIMIT") return <DeviceLimit onFreed={() => void me.refetch()} />;
   if (me.error) {
     const denied = me.error instanceof ApiError && (me.error.status === 403 || me.error.status === 401);
     return (
