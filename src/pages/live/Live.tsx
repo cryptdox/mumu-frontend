@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AudioRenderer, Controls, MumuRoom, VideoTile, useChat, useParticipants, useRoom } from "mumu-rtc/react";
+import { AudioRenderer, Controls, MumuRoom, VideoTile, useParticipants, useRoom } from "mumu-rtc/react";
 import { ArrowLeft, Eye, MessageCircle, Radio, SendHorizontal, Users, X } from "lucide-react";
 import { mu } from "@/api/mu";
-import type { Audience, LiveStream, RtcJoin } from "@/api/types";
+import type { Audience, Comment, LiveStream, RtcJoin } from "@/api/types";
 import { useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { liveTakeoverStore, useSocket } from "@/lib/realtime";
@@ -125,15 +125,58 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-function useProfileCard(profileId: string) {
-  return useQuery({ queryKey: ["profile", profileId], queryFn: () => mu.profiles.get(profileId), staleTime: 5 * 60_000 }).data;
+// ── Live chat = comments on the live's post ─────────────────────────────────
+// Saved like any comment (so they stay on the post in the feed afterwards) and pushed to
+// everyone watching over the socket ("live:comment" / "live:comment-removed").
+
+interface LiveChat {
+  messages: { id: string; name: string; text: string; at: string; isLocal: boolean }[];
+  send: (text: string) => void;
+}
+const LiveChatCtx = createContext<LiveChat>({ messages: [], send: () => {} });
+const useLiveChat = () => useContext(LiveChatCtx);
+
+function useLiveCommentsState(postId: string | null, meId: string): LiveChat {
+  const socket = useSocket();
+  const key = ["live-comments", postId];
+  const history = useQuery({ queryKey: key, queryFn: () => mu.posts.comments(postId!), enabled: !!postId, staleTime: Infinity });
+  const upsert = (c: Comment) =>
+    queryClient.setQueryData<Comment[]>(key, (list = []) => (list.some((x) => x.commentId === c.commentId) ? list : [c, ...list]));
+
+  useEffect(() => {
+    if (!socket || !postId) return;
+    const added = (c: Comment) => c.postId === postId && upsert(c);
+    const removed = (r: { commentId: string }) => queryClient.setQueryData<Comment[]>(key, (list = []) => list.filter((x) => x.commentId !== r.commentId));
+    socket.on("live:comment", added);
+    socket.on("live:comment-removed", removed);
+    return () => {
+      socket.off("live:comment", added);
+      socket.off("live:comment-removed", removed);
+    };
+  }, [socket, postId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const messages = useMemo(
+    () =>
+      [...(history.data ?? [])].reverse().map((c) => ({
+        id: c.commentId,
+        name: c.author.displayName,
+        text: c.text,
+        at: c.createdAt,
+        isLocal: c.author.profileId === meId,
+      })),
+    [history.data, meId],
+  );
+  const send = (text: string) => {
+    if (!postId) return;
+    mu.posts.comment(postId, text).then(upsert, toastError);
+  };
+  return { messages, send };
 }
 
-function ChatLine({ userId, text, isLocal }: { userId: string; text: string; isLocal: boolean }) {
-  const p = useProfileCard(userId);
+function ChatLine({ name, text, isLocal }: { name: string; text: string; isLocal: boolean }) {
   return (
     <p className="text-sm leading-snug">
-      <span className={cx("mr-1.5 font-semibold", isLocal ? "text-brand" : "text-accent")}>{isLocal ? "You" : p?.displayName ?? "…"}</span>
+      <span className={cx("mr-1.5 font-semibold", isLocal ? "text-brand" : "text-accent")}>{isLocal ? "You" : name}</span>
       <span className="break-words text-white/90">{text}</span>
     </p>
   );
@@ -170,7 +213,7 @@ function ChatForm({ onSend, autoFocus }: { onSend: (text: string) => void; autoF
 
 /** Full chat history (side panel on wide screens, right-hand drawer on phones). */
 function ChatHistory() {
-  const { messages, send } = useChat();
+  const { messages, send } = useLiveChat();
   const listRef = useRef<HTMLDivElement>(null);
   // Braces matter: newer Chrome returns a Promise from scrollTo(), and an effect that returns
   // anything is called as its cleanup — closing the chat then crashed with "… is not a function".
@@ -180,7 +223,7 @@ function ChatHistory() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={listRef} className="scrollbar-thin min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
-        {messages.length ? messages.map((m, i) => <ChatLine key={i} userId={m.userId} text={m.text} isLocal={m.isLocal} />) : <p className="pt-8 text-center text-sm text-white/50">No messages yet — say hi 👋</p>}
+        {messages.length ? messages.map((m) => <ChatLine key={m.id} name={m.name} text={m.text} isLocal={m.isLocal} />) : <p className="pt-8 text-center text-sm text-white/50">No messages yet — say hi 👋</p>}
       </div>
       <div className="safe-bottom flex p-3">
         <ChatForm onSend={(t) => void send(t)} />
@@ -194,7 +237,7 @@ function ChatHistory() {
  * and older ones fade away. Tapping them (or the chat button) opens the full chat on the right.
  */
 function ChatOverlay() {
-  const { messages, send } = useChat();
+  const { messages, send } = useLiveChat();
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -220,8 +263,8 @@ function ChatOverlay() {
           // Newest is fully visible; older lines and anything older than ~8 s fade back.
           const opacity = age > 12 ? 0.25 : age > 8 ? 0.5 : 1 - (recent.length - 1 - i) * 0.18;
           return (
-            <div key={messages.length - recent.length + i} className="mu-chat-in transition-opacity duration-700" style={{ opacity }}>
-              <ChatLine userId={m.userId} text={m.text} isLocal={m.isLocal} />
+            <div key={m.id} className="mu-chat-in transition-opacity duration-700" style={{ opacity }}>
+              <ChatLine name={m.name} text={m.text} isLocal={m.isLocal} />
             </div>
           );
         })}
@@ -347,6 +390,7 @@ export function LiveRoom() {
   const stream = useQuery({ queryKey: ["live", id], queryFn: () => mu.live.get(id), initialData: join.data?.stream, refetchInterval: 30_000 }).data;
   const isHost = stream?.hostProfileId === me.profileId;
   const wide = useMediaQuery("(min-width: 1024px)");
+  const chat = useLiveCommentsState(stream?.postId ?? join.data?.stream.postId ?? null, me.profileId);
   const publish = useMemo(() => (isHost ? { camera: true, mic: true } : { camera: false, mic: false }), [isHost]);
 
   useEffect(() => {
@@ -401,6 +445,7 @@ export function LiveRoom() {
 
   return (
     <div className="fixed inset-0 z-40 flex bg-black text-white md:static md:z-auto md:flex-1">
+      <LiveChatCtx.Provider value={chat}>
       <MumuRoom apiUrl={join.data.rtc.apiUrl} token={ended ? null : join.data.rtc.token} publish={publish} onError={(e) => toast(e.message, "error")}>
         {/* The video always fills this stage; header, controls and (on phones) chat float over it,
             so a phone keyboard opening for the chat never squeezes the video away. */}
@@ -446,6 +491,7 @@ export function LiveRoom() {
           </aside>
         )}
       </MumuRoom>
+      </LiveChatCtx.Provider>
     </div>
   );
 }

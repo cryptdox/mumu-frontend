@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AudioRenderer, Controls, MumuRoom, VideoTile, useParticipants, useRoom, type Participant } from "mumu-rtc/react";
 import { Phone, PhoneOff, Video } from "lucide-react";
@@ -78,7 +78,7 @@ function Tile({ p, big }: { p: Participant; big?: boolean }) {
   const name = p.isLocal ? "You" : profile?.displayName ?? "…";
   const cameraOn = !!p.tracks.camera && !p.muted.camera;
   return (
-    <div className={cx("relative overflow-hidden rounded-3xl bg-[#273c75]", big ? "h-full w-full" : "aspect-[3/4] w-28 sm:aspect-video sm:w-48")}>
+    <div className={cx("relative overflow-hidden rounded-3xl bg-[#273c75]", big ? "h-full min-h-0 w-full" : "aspect-[3/4] w-24 sm:aspect-video sm:w-48")}>
       {cameraOn ? (
         <VideoTile participant={p} showLabel={false} className="!aspect-auto h-full !rounded-none" />
       ) : (
@@ -94,6 +94,24 @@ function Tile({ p, big }: { p: Participant; big?: boolean }) {
   );
 }
 
+/** Grid columns: phones in portrait stack 2 people and go 2-wide after that; wide screens go wider. */
+function columns(count: number, portrait: boolean) {
+  if (portrait) return count <= 2 ? 1 : 2;
+  return count <= 1 ? 1 : count <= 4 ? 2 : 3;
+}
+
+function usePortrait() {
+  const query = "(orientation: portrait)";
+  const [portrait, setPortrait] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setPortrait(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, []);
+  return portrait;
+}
+
 function Stage({ call }: { call: CallInfo }) {
   const participants = useParticipants();
   const { state, error } = useRoom();
@@ -101,6 +119,8 @@ function Stage({ call }: { call: CallInfo }) {
   const remote = participants.filter((p) => !p.isLocal);
   const local = participants.find((p) => p.isLocal);
   const waiting = remote.length === 0;
+  const portrait = usePortrait();
+  const tiles = local ? [...remote, local] : remote;
   useKeepVideosPlaying(".mu-call-stage");
   useRingtone(waiting && call.status === "RINGING" && state === "connected", true);
 
@@ -113,17 +133,21 @@ function Stage({ call }: { call: CallInfo }) {
           <p className="max-w-sm px-6 text-center text-white/70">{failure ? failure : state !== "connected" ? "Connecting…" : call.status === "RINGING" ? "Ringing…" : "Waiting for others…"}</p>
         </div>
       ) : remote.length === 1 ? (
-        <Tile p={remote[0]} big />
+        // 1:1 — the other person fills the screen, you're a small picture in the corner.
+        <>
+          <Tile p={remote[0]} big />
+          {local && (
+            <div className="absolute bottom-5 right-5 shadow-2xl sm:bottom-auto sm:right-7 sm:top-7">
+              <Tile p={local} />
+            </div>
+          )}
+        </>
       ) : (
-        <div className="grid flex-1 auto-rows-fr gap-3" style={{ gridTemplateColumns: `repeat(${remote.length <= 4 ? 2 : 3}, minmax(0, 1fr))` }}>
-          {remote.map((p) => (
+        // Group — everyone (you included) is a tile, so nothing covers anyone.
+        <div className="grid min-h-0 flex-1 auto-rows-fr gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(${columns(tiles.length, portrait)}, minmax(0, 1fr))` }}>
+          {tiles.map((p) => (
             <Tile key={p.peerId} p={p} big />
           ))}
-        </div>
-      )}
-      {local && (
-        <div className="absolute right-5 top-5 shadow-2xl sm:right-7 sm:top-7">
-          <Tile p={local} />
         </div>
       )}
     </div>

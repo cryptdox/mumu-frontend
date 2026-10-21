@@ -211,6 +211,17 @@ await step("live: a non-follower can't see it; ending it tells the viewer", asyn
     throw new Error(`viewer wasn't told: ${(await ayesha.evaluate(() => document.body.innerText)).slice(0, 200)}`);
   });
   await ayesha.screenshot({ path: path.join(SHOTS, "8-live-ended.png") });
+  // The live chat stays: it's the live post's comments in the feed.
+  const liveId = new URL(ayesha.url()).pathname.split("/").pop();
+  const postId = await ayesha.evaluate(async (api, id) => {
+    const s = JSON.parse(localStorage.getItem("mu.session"));
+    const r = await fetch(`${api}/api/live/${id}`, { headers: { authorization: `Bearer ${s.accessToken}`, "x-device-id": localStorage.getItem("mu.device") } });
+    return (await r.json()).data.postId;
+  }, process.env.API_URL ?? "http://localhost:4101", liveId);
+  await ayesha.goto(`${APP}/posts/${postId}`, { waitUntil: "networkidle2" });
+  await ayesha.waitForFunction(() => document.body.innerText.includes("Smells amazing from here"), { timeout: 10000 })
+    .catch(() => { throw new Error("live chat message isn't on the live's post afterwards"); });
+  await ayesha.screenshot({ path: path.join(SHOTS, "8b-live-post-comments.png") });
 });
 
 await step("live on two devices: the second device asks, takes over, the first steps off, viewers keep watching", async () => {
