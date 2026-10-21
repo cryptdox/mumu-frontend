@@ -172,7 +172,11 @@ function ChatForm({ onSend, autoFocus }: { onSend: (text: string) => void; autoF
 function ChatHistory() {
   const { messages, send } = useChat();
   const listRef = useRef<HTMLDivElement>(null);
-  useEffect(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }), [messages.length]);
+  // Braces matter: newer Chrome returns a Promise from scrollTo(), and an effect that returns
+  // anything is called as its cleanup — closing the chat then crashed with "… is not a function".
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages.length]);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={listRef} className="scrollbar-thin min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">

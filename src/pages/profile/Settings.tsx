@@ -26,7 +26,9 @@ function ProfileForm() {
   const [form, setForm] = useState({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", category: me.category ?? "", website: me.website ?? "" });
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
-  useEffect(() => setForm({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", category: me.category ?? "", website: me.website ?? "" }), [me.profileId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setForm({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", category: me.category ?? "", website: me.website ?? "" });
+  }, [me.profileId]); // eslint-disable-line react-hooks/exhaustive-deps
   const canEdit = me.role !== "EDITOR";
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["me"] });

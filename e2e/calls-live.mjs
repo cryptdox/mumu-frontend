@@ -41,6 +41,17 @@ async function personPage(handle, extra = {}, device = "main") {
   const page = await ctx.newPage();
   await page.setViewport({ width: 1100, height: 760 });
   page.on("pageerror", (e) => console.log(`  [${handle}] page error: ${e.message}`));
+  // Newer Chrome (e.g. on Android) returns a Promise from scroll methods — behave the same
+  // here, so code that accidentally returns one (from an effect) crashes in the test too.
+  await page.evaluateOnNewDocument(() => {
+    for (const proto of [Element.prototype, Window.prototype]) {
+      const orig = proto.scrollTo;
+      proto.scrollTo = function (...args) {
+        orig.apply(this, args);
+        return Promise.resolve();
+      };
+    }
+  });
   await page.goto(`${APP}/login`);
   await page.evaluate((s, dev) => {
     localStorage.setItem("mu.session", JSON.stringify(s));
@@ -293,6 +304,7 @@ await step("a personal profile on another device watches a business live; openin
   await tanvir.waitForFunction(() => !document.querySelector(".mu-live-screen video").paused, { timeout: 5000 })
     .catch(() => { throw new Error("a paused live video wasn't restarted"); });
   await progressing(tanvir);
+  if (await tanvir.evaluate(() => document.body.innerText.includes("Something went wrong"))) throw new Error("the app crashed");
   await tanvir.screenshot({ path: path.join(SHOTS, "11-viewer-after-comments.png") });
   await rafi.click(".mumu-btn--leave");
 });
