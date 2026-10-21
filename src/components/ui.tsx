@@ -282,3 +282,55 @@ export function AudiencePicker({ value, onChange, kind }: { value: Audience; onC
     </div>
   );
 }
+
+// ── Confirm dialog (instead of the browser's confirm()) ─────────────────────
+
+interface ConfirmRequest {
+  title: string;
+  message?: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  resolve: (ok: boolean) => void;
+}
+let confirmListener: ((r: ConfirmRequest | null) => void) | null = null;
+
+/** Ask before doing something; resolves true when confirmed. Rendered by <ConfirmHost/>. */
+export function confirmAction(opts: Omit<ConfirmRequest, "resolve">): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!confirmListener) return resolve(window.confirm(opts.message ?? opts.title));
+    confirmListener({ ...opts, resolve });
+  });
+}
+
+/** Run `fn` only after the person confirms. */
+export const confirmThen = (opts: Omit<ConfirmRequest, "resolve">, fn: () => void) => () => void confirmAction(opts).then((ok) => ok && fn());
+
+export function ConfirmHost() {
+  const [req, setReq] = useState<ConfirmRequest | null>(null);
+  useEffect(() => {
+    confirmListener = setReq;
+    return () => void (confirmListener = null);
+  }, []);
+  const close = (ok: boolean) => {
+    req?.resolve(ok);
+    setReq(null);
+  };
+  return (
+    <Sheet open={!!req} onClose={() => close(false)}>
+      {req && (
+        <div className="pt-6 text-center sm:pt-5" role="alertdialog" aria-label={req.title}>
+          <h2 className="text-lg font-bold">{req.title}</h2>
+          {req.message && <p className="mx-auto mt-1.5 max-w-xs text-sm text-muted">{req.message}</p>}
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <Button variant={req.danger ? "danger" : "primary"} className="sm:order-2" onClick={() => close(true)} autoFocus>
+              {req.confirmLabel ?? "OK"}
+            </Button>
+            <Button variant="secondary" className="sm:order-1" onClick={() => close(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
+}

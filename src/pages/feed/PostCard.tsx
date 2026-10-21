@@ -7,7 +7,7 @@ import type { Post, ReactionType } from "@/api/types";
 import { useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { compact, shortTime } from "@/lib/format";
-import { Avatar, AudienceIcon, Button, CharCounter, IconButton, Name, Sheet, Textarea, audienceLabel, cx, toast, toastError } from "@/components/ui";
+import { Avatar, AudienceIcon, Button, CharCounter, IconButton, Name, Sheet, Textarea, audienceLabel, confirmAction, cx, toast, toastError } from "@/components/ui";
 import { SheetAction } from "@/pages/chats/Thread";
 import { charCount } from "@/lib/format";
 import { LIMITS } from "@/config";
@@ -184,7 +184,7 @@ export function PostCard({ post, linked = true }: { post: Post; linked?: boolean
       <Sheet open={menu} onClose={() => setMenu(false)} title="Post">
         <div className="grid gap-1">
           {mine && <SheetAction icon={<Pencil />} label="Edit text" onClick={() => (setDraft(post.text ?? ""), setEditing(true), setMenu(false))} />}
-          {mine && <SheetAction icon={<Trash2 />} label="Delete post" danger onClick={() => (setMenu(false), remove.mutate())} />}
+          {mine && <SheetAction icon={<Trash2 />} label="Delete post" danger onClick={() => (setMenu(false), void confirmAction({ title: "Delete this post?", message: "It's removed for everyone, with its comments.", confirmLabel: "Delete", danger: true }).then((ok) => ok && remove.mutate()))} />}
           {!mine && (
             <SheetAction
               icon={<Flag />}

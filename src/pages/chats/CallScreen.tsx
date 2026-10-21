@@ -145,9 +145,16 @@ function Stage({ call }: { call: CallInfo }) {
       ) : (
         // Group — everyone (you included) is a tile, so nothing covers anyone.
         <div className="grid min-h-0 flex-1 auto-rows-fr gap-2 sm:gap-3" style={{ gridTemplateColumns: `repeat(${columns(tiles.length, portrait)}, minmax(0, 1fr))` }}>
-          {tiles.map((p) => (
-            <Tile key={p.peerId} p={p} big />
-          ))}
+          {tiles.map((p, i) => {
+            const cols = columns(tiles.length, portrait);
+            // An odd last tile on a 2-wide grid takes the whole row (no empty half).
+            const span = cols === 2 && tiles.length % 2 === 1 && i === tiles.length - 1;
+            return (
+              <div key={p.peerId} className="min-h-0" style={span ? { gridColumn: "1 / -1" } : undefined}>
+                <Tile p={p} big />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

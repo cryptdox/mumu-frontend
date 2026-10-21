@@ -5,7 +5,7 @@ import { mu } from "@/api/mu";
 import type { Conversation } from "@/api/types";
 import { useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
-import { Avatar, Button, IconButton, Input, Name, Sheet, toastError } from "@/components/ui";
+import { Avatar, Button, IconButton, Input, Name, Sheet, confirmThen, toastError } from "@/components/ui";
 import { PersonRow, useProfileSearch } from "./NewChat";
 
 export function GroupInfo({ chat, open, onClose }: { chat: Conversation; open: boolean; onClose: () => void }) {
@@ -64,7 +64,7 @@ export function GroupInfo({ chat, open, onClose }: { chat: Conversation; open: b
               <span className="block text-xs text-muted">{m.role === "ADMIN" ? "Admin" : `@${m.handle}`}</span>
             </span>
             {isAdmin && m.profileId !== me.profileId && (
-              <IconButton label={`Remove ${m.displayName}`} onClick={() => remove.mutate(m.profileId)} className="text-danger">
+              <IconButton label={`Remove ${m.displayName}`} onClick={confirmThen({ title: `Remove ${m.displayName}?`, message: `They'll leave "${chat.title}".`, confirmLabel: "Remove", danger: true }, () => remove.mutate(m.profileId))} className="text-danger">
                 <UserMinus className="size-5" />
               </IconButton>
             )}

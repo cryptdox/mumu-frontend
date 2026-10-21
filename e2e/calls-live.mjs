@@ -119,6 +119,31 @@ await step("voice call: audio only, no camera", async () => {
   await rafi.waitForFunction(() => !document.querySelector(".mumu-controls"), { timeout: 10000 });
 });
 
+await step("group video call: everyone who answers joins (others keep ringing), phone grid without overlaps", async () => {
+  const nadia = await personPage("nadia");
+  await ayesha.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  await ayesha.goto(`${APP}/chats`, { waitUntil: "networkidle2" });
+  await clickText(ayesha, "a", "Sreemangal trip");
+  await ayesha.waitForSelector('button[aria-label="Video call"]');
+  await ayesha.click('button[aria-label="Video call"]');
+  for (const [i, who] of [rafi, nadia].entries()) {
+    await who.waitForSelector('button[aria-label="Accept"]', { timeout: 15000 })
+      .catch(() => { throw new Error(`${i === 0 ? "Rafi" : "Nadia"} didn't get the ring${i ? " after someone else answered" : ""}`); });
+    await who.click('button[aria-label="Accept"]');
+    await ayesha.waitForFunction((n) => [...document.querySelectorAll(".mu-call-stage video")].filter((v) => v.videoWidth > 0).length >= n, { timeout: 20000 }, i + 2);
+  }
+  // Phone grid: 3 tiles, nobody covered by another (tiles don't overlap).
+  const overlap = await ayesha.evaluate(() => {
+    const r = [...document.querySelectorAll(".mu-call-stage video")].map((v) => v.getBoundingClientRect());
+    return r.some((a, i) => r.some((b, j) => i < j && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+  });
+  if (overlap) throw new Error("call tiles overlap on the phone layout");
+  await ayesha.screenshot({ path: path.join(SHOTS, "12-group-call-phone.png") });
+  await ayesha.click(".mumu-btn--leave"); // the caller ends a group call for everyone
+  await nadia.waitForFunction(() => !document.querySelector(".mumu-controls"), { timeout: 10000 });
+  await ayesha.setViewport({ width: 1100, height: 760 });
+});
+
 // Rafi acts as his business Dhaka Bites.
 const me = await rafi.evaluate(async (api) => {
   const s = JSON.parse(localStorage.getItem("mu.session"));

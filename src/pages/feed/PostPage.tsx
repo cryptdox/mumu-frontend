@@ -9,7 +9,7 @@ import { queryClient } from "@/lib/query";
 import { LoadMore, nextBefore } from "@/lib/infinite";
 import { charCount, shortTime } from "@/lib/format";
 import { LIMITS } from "@/config";
-import { Avatar, CharCounter, ErrorNote, IconButton, Loading, Name, toastError } from "@/components/ui";
+import { Avatar, CharCounter, ErrorNote, IconButton, Loading, Name, confirmThen, toastError } from "@/components/ui";
 import { PostCard, patchPost } from "./PostCard";
 
 export default function PostPage() {
@@ -66,7 +66,7 @@ export default function PostPage() {
             <span className="font-normal">{shortTime(c.createdAt)}</span>
             {!reply && <button onClick={() => setReplyTo(c)} className="hover:text-ink">Reply</button>}
             {(c.author.profileId === me.profileId || post.data?.author.profileId === me.profileId) && (
-              <button onClick={() => remove.mutate(c.commentId)} className="hover:text-danger" aria-label="Delete comment"><Trash2 className="size-3.5" /></button>
+              <button onClick={confirmThen({ title: "Delete this comment?", confirmLabel: "Delete", danger: true }, () => remove.mutate(c.commentId))} className="hover:text-danger" aria-label="Delete comment"><Trash2 className="size-3.5" /></button>
             )}
           </div>
         </div>

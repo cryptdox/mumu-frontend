@@ -5,7 +5,7 @@ import type { Device } from "@/api/types";
 import { useAuth } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { ago } from "@/lib/format";
-import { Button, Loading, cx, toast, toastError } from "@/components/ui";
+import { Button, Loading, confirmThen, cx, toast, toastError } from "@/components/ui";
 
 const isPhone = (label: string) => /Android|iPhone|iPad/.test(label);
 
@@ -49,7 +49,7 @@ export function DevicesCard() {
       ) : (
         <ul className="mt-2 divide-y divide-line">
           {devices.data?.devices.map((d) => (
-            <DeviceRow key={d.deviceId} d={d} onSignOut={d.current ? undefined : () => signOut.mutate(d.deviceId)} busy={signOut.isPending && signOut.variables === d.deviceId} />
+            <DeviceRow key={d.deviceId} d={d} onSignOut={d.current ? undefined : confirmThen({ title: `Sign out ${d.label}?`, message: "That device will be signed out of MuMu right away.", confirmLabel: "Sign out", danger: true }, () => signOut.mutate(d.deviceId))} busy={signOut.isPending && signOut.variables === d.deviceId} />
           ))}
         </ul>
       )}
@@ -81,7 +81,7 @@ export function DeviceLimit({ onFreed }: { onFreed: () => void }) {
         ) : (
           <ul className="mt-3 divide-y divide-line">
             {others.map((d) => (
-              <DeviceRow key={d.deviceId} d={d} onSignOut={() => signOut.mutate(d.deviceId)} busy={signOut.isPending && signOut.variables === d.deviceId} />
+              <DeviceRow key={d.deviceId} d={d} onSignOut={confirmThen({ title: `Sign out ${d.label}?`, message: "That device will be signed out so you can use MuMu here.", confirmLabel: "Sign out", danger: true }, () => signOut.mutate(d.deviceId))} busy={signOut.isPending && signOut.variables === d.deviceId} />
             ))}
           </ul>
         )}

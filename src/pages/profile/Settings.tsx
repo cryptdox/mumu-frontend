@@ -8,7 +8,7 @@ import { queryClient } from "@/lib/query";
 import { IMAGE_ACCEPT, prepareImage } from "@/lib/image";
 import { setTheme, themeStore, type Theme } from "@/lib/theme";
 import { useStore } from "@/lib/store";
-import { Avatar, Button, IconButton, Input, Name, Tabs, Textarea, cx, toast, toastError } from "@/components/ui";
+import { Avatar, Button, IconButton, Input, Name, Tabs, Textarea, confirmThen, cx, toast, toastError } from "@/components/ui";
 import { DevicesCard } from "./Devices";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -117,7 +117,7 @@ function Members() {
               <span className="block text-xs capitalize text-muted">{m.role.toLowerCase()}</span>
             </span>
             {m.role !== "OWNER" && (
-              <IconButton label="Remove" onClick={() => remove.mutate(m.userId)} className="text-danger"><UserMinus className="size-5" /></IconButton>
+              <IconButton label="Remove" onClick={confirmThen({ title: `Remove ${m.profile?.displayName ?? "this person"}?`, message: "They won't be able to post, chat or go live as this page any more.", confirmLabel: "Remove", danger: true }, () => remove.mutate(m.userId))} className="text-danger"><UserMinus className="size-5" /></IconButton>
             )}
           </li>
         ))}
@@ -197,7 +197,7 @@ export default function SettingsPage() {
               <LogOut className="size-4" /> Sign out
             </Button>
             {me.kind === "BUSINESS" && me.role === "OWNER" && (
-              <Button variant="danger" loading={remove.isPending} onClick={() => confirm(`Delete ${me.displayName}? Its posts stay hidden; this can't be undone.`) && remove.mutate()}>
+              <Button variant="danger" loading={remove.isPending} onClick={confirmThen({ title: `Delete ${me.displayName}?`, message: "Its posts stay hidden and its people lose access. This can't be undone.", confirmLabel: "Delete", danger: true }, () => remove.mutate())}>
                 <Trash2 className="size-4" /> Delete business profile
               </Button>
             )}

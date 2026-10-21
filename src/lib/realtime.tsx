@@ -19,6 +19,9 @@ export const unreadStore = createStore({ notifications: 0 });
 /** Set when one of your lives moved to another of your devices. */
 export const liveTakeoverStore = createStore<{ liveStreamId: string } | null>(null);
 
+/** How long an incoming call rings (matches the server's CALL_RING_SECONDS default). */
+const RING_MS = 45_000;
+
 const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function markTyping(conversationId: string, profileId: string) {
   const key = `${conversationId}:${profileId}`;
@@ -97,12 +100,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     });
 
     s.on("call:ring", (call: CallInfo) => {
-      if (!callStore.get().active) callStore.set((c) => ({ ...c, incoming: call }));
+      if (callStore.get().active) return;
+      callStore.set((c) => ({ ...c, incoming: call }));
+      // Stop ringing after a while even if nobody tells us (group calls keep going without you).
+      setTimeout(() => callStore.set((c) => (c.incoming?.callId === call.callId ? { ...c, incoming: null } : c)), RING_MS);
     });
     s.on("call:updated", (call: CallInfo) => {
+      const over = call.status === "ENDED" || call.status === "MISSED";
+      // A 1:1 call that turned ONGOING was answered (maybe on your other device) — stop ringing.
+      // A group call turning ONGOING just means someone else picked up: keep ringing here.
+      const answeredElsewhere = call.status === "ONGOING" && call.conversation?.type !== "GROUP";
       callStore.set((c) => ({
-        incoming: c.incoming?.callId === call.callId && call.status !== "RINGING" ? null : c.incoming,
-        active: c.active?.call.callId === call.callId ? (["ENDED", "MISSED"].includes(call.status) ? null : { ...c.active, call }) : c.active,
+        incoming: c.incoming?.callId === call.callId && (over || answeredElsewhere) ? null : c.incoming,
+        active: c.active?.call.callId === call.callId ? (over ? null : { ...c.active, call }) : c.active,
       }));
     });
 

@@ -13,7 +13,7 @@ import { typingStore, upsertMessage, useSocket } from "@/lib/realtime";
 import { useStore } from "@/lib/store";
 import { clock, dayLabel, duration } from "@/lib/format";
 import { IMAGE_ACCEPT, prepareImage } from "@/lib/image";
-import { Avatar, CharCounter, Empty, ErrorNote, IconButton, Loading, Name, Sheet, cx, toast, toastError } from "@/components/ui";
+import { Avatar, CharCounter, Empty, ErrorNote, IconButton, Loading, Name, Sheet, confirmAction, cx, toast, toastError } from "@/components/ui";
 import { charCount } from "@/lib/format";
 import { LIMITS } from "@/config";
 import { startCall } from "./CallScreen";
@@ -449,7 +449,7 @@ export default function Thread() {
               <SheetAction icon={<Pencil />} label="Edit" onClick={() => (setEditing(action), setReplyTo(null), setAction(null))} />
             )}
             {action.sender.profileId === me.profileId && (
-              <SheetAction icon={<Trash2 />} label="Delete for everyone" danger onClick={() => (remove.mutate(action), setAction(null))} />
+              <SheetAction icon={<Trash2 />} label="Delete for everyone" danger onClick={() => { const m = action; setAction(null); void confirmAction({ title: "Delete for everyone?", message: "Everyone in this chat will see “This message was deleted”.", confirmLabel: "Delete", danger: true }).then((ok) => ok && remove.mutate(m)); }} />
             )}
             {action.sender.profileId !== me.profileId && (
               <SheetAction
@@ -475,7 +475,7 @@ export default function Thread() {
             label={c.mutedUntil ? "Unmute" : "Mute notifications"}
             onClick={() => (mute.mutate(!!c.mutedUntil), setMenu(false))}
           />
-          {c.type === "GROUP" && <SheetAction icon={<LogOut />} label="Leave group" danger onClick={() => (setMenu(false), leave.mutate())} />}
+          {c.type === "GROUP" && <SheetAction icon={<LogOut />} label="Leave group" danger onClick={() => (setMenu(false), void confirmAction({ title: `Leave "${c.title}"?`, message: "You'll stop getting its messages. An admin can add you back.", confirmLabel: "Leave", danger: true }).then((ok) => ok && leave.mutate()))} />}
         </div>
       </Sheet>
       {c.type === "GROUP" && <GroupInfo chat={c} open={info} onClose={() => setInfo(false)} />}

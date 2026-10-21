@@ -8,7 +8,7 @@ import { useAuth, useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { LoadMore, nextBefore } from "@/lib/infinite";
 import { compact } from "@/lib/format";
-import { Avatar, Button, Empty, ErrorNote, IconButton, Loading, Name, Sheet, cx, toast, toastError } from "@/components/ui";
+import { Avatar, Button, Empty, ErrorNote, IconButton, Loading, Name, Sheet, confirmAction, cx, toast, toastError } from "@/components/ui";
 import { SheetAction } from "@/pages/chats/Thread";
 import { PersonRow } from "@/pages/chats/NewChat";
 import { PostCard } from "@/pages/feed/PostCard";
@@ -148,7 +148,7 @@ export default function ProfilePage() {
 
       <Sheet open={menu} onClose={() => setMenu(false)} title={p.displayName}>
         <div className="grid gap-1">
-          <SheetAction icon={<Ban />} label={p.relationship.blocked ? "Unblock" : `Block ${p.kind === "BUSINESS" ? "this business" : p.displayName}`} danger onClick={() => block.mutate()} />
+          <SheetAction icon={<Ban />} label={p.relationship.blocked ? "Unblock" : `Block ${p.kind === "BUSINESS" ? "this business" : p.displayName}`} danger onClick={() => { setMenu(false); if (p.relationship.blocked) return block.mutate(); void confirmAction({ title: `Block ${p.displayName}?`, message: "You won't see each other's posts or lives, and they can't message or call you. Friendship and follows end.", confirmLabel: "Block", danger: true }).then((ok) => ok && block.mutate()); }} />
           <SheetAction
             icon={<Flag />}
             label="Report profile"
