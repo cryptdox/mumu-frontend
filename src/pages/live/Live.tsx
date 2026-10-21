@@ -8,7 +8,7 @@ import type { Audience, LiveStream, RtcJoin } from "@/api/types";
 import { useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { liveTakeoverStore, useSocket } from "@/lib/realtime";
-import { useStore } from "@/lib/store";
+import { createStore, useStore } from "@/lib/store";
 import { useKeepVideosPlaying } from "@/lib/keepPlaying";
 import { compact, shortTime } from "@/lib/format";
 import { errorCode, errorMessage } from "@/lib/api";
@@ -139,6 +139,9 @@ function ChatLine({ userId, text, isLocal }: { userId: string; text: string; isL
   );
 }
 
+/** Bumped when the live video may have been stopped by the browser (chat panel closed…). */
+const videoKick = createStore(0);
+
 function ChatForm({ onSend, autoFocus }: { onSend: (text: string) => void; autoFocus?: boolean }) {
   const [text, setText] = useState("");
   const submit = (e: FormEvent) => {
@@ -195,6 +198,11 @@ function ChatOverlay() {
     return () => clearInterval(t);
   }, []);
   const recent = messages.slice(-4);
+  // Phones stop decoding video hidden behind the panel; ask for a fresh picture on close.
+  const close = () => {
+    setOpen(false);
+    videoKick.set((n) => n + 1);
+  };
   return (
     <>
       <button
@@ -222,7 +230,7 @@ function ChatOverlay() {
         <ChatForm onSend={(t) => void send(t)} />
       </div>
       {open && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => close()}>
           <aside
             role="dialog"
             aria-label="Live chat"
@@ -231,7 +239,7 @@ function ChatOverlay() {
           >
             <div className="flex items-center justify-between px-4 pt-3">
               <p className="font-semibold">Live chat</p>
-              <IconButton label="Close chat" onClick={() => setOpen(false)} className="text-white hover:bg-white/10">
+              <IconButton label="Close chat" onClick={() => close()} className="text-white hover:bg-white/10">
                 <X className="size-5" />
               </IconButton>
             </div>
@@ -242,6 +250,27 @@ function ChatOverlay() {
     </>
   );
 }
+
+/** `?debug=1` on a live: the video's state, for diagnosing black screens on a phone. */
+function VideoDebug() {
+  const [info, setInfo] = useState("");
+  useEffect(() => {
+    let frames = 0;
+    let last = 0;
+    const t = setInterval(() => {
+      const v = document.querySelector<HTMLVideoElement>(".mu-live-screen video");
+      const tr = (v?.srcObject as MediaStream | null)?.getVideoTracks()[0];
+      const q = (v as (HTMLVideoElement & { getVideoPlaybackQuality?: () => VideoPlaybackQuality }) | null)?.getVideoPlaybackQuality?.();
+      const total = q?.totalVideoFrames ?? 0;
+      frames = total - last;
+      last = total;
+      setInfo(v ? `${v.videoWidth}x${v.videoHeight} ${v.paused ? "PAUSED" : "playing"} ready=${v.readyState} fps≈${frames} track=${tr ? `${tr.readyState}${tr.muted ? " muted" : ""}${tr.enabled ? "" : " disabled"}` : "none"} vis=${document.visibilityState}` : "no <video>");
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <div className="pointer-events-none absolute left-2 top-16 z-20 rounded bg-black/70 px-2 py-1 font-mono text-[11px] text-ok">{info}</div>;
+}
+const DEBUG = typeof location !== "undefined" && new URLSearchParams(location.search).has("debug");
 
 function Screen({ stream }: { stream: LiveStream }) {
   const participants = useParticipants();
@@ -258,11 +287,28 @@ function Screen({ stream }: { stream: LiveStream }) {
   const source = host?.tracks.screen ? "screen" : "camera";
   const showing = stream.status === "LIVE" && host && host.tracks[source] && !host.muted[source];
   useKeepVideosPlaying(".mu-live-screen", !!showing);
+  const { room } = useRoom();
+  const kick = useStore(videoKick);
+  const peerId = host?.peerId;
+  const track = showing ? host?.tracks[source] : undefined;
+  useEffect(() => {
+    if (!peerId || !track || host?.isLocal) return;
+    // The <video> itself is replaced on every kick (its key changes) — on some phones
+    // (MediaTek / vivo) Chrome's video layer stays black after being covered, and only a new
+    // element gets a working one. Then pause/resume the consumer on the media server,
+    // which requests a keyframe, so the new element gets a picture at once.
+    const keyframe = () => void room.setVideoVisible(peerId, source, false).then(() => room.setVideoVisible(peerId, source, true));
+    const onVisible = () => document.visibilityState === "visible" && videoKick.set((n) => n + 1);
+    if (kick) keyframe();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [kick, peerId, track, source, room, host?.isLocal]);
   return (
     <div className="mu-live-screen absolute inset-0 flex items-center justify-center bg-black">
+      {DEBUG && <VideoDebug />}
       <AudioRenderer />
       {showing ? (
-        <VideoTile participant={host} source={source} showLabel={false} mirror={host.isLocal && source === "camera"} />
+        <VideoTile key={`${host.peerId}:${kick}`} participant={host} source={source} showLabel={false} mirror={host.isLocal && source === "camera"} />
       ) : (
         <div className="flex flex-col items-center gap-3 text-white/80">
           <Avatar profile={stream.host} size={96} />

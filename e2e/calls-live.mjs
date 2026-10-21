@@ -270,7 +270,19 @@ await step("a personal profile on another device watches a business live; openin
       await tanvir.keyboard.press("Enter");
     }
     await new Promise((r) => setTimeout(r, 1500));
+    if (round === 3) {
+      // What a phone does while the panel covers the video: the picture is gone (black).
+      await tanvir.evaluate(() => { document.querySelector(".mu-live-screen video").srcObject = null; });
+    }
+    await tanvir.evaluate(() => { const v = document.querySelector(".mu-live-screen video"); if (v) v.dataset.old = "1"; });
     await tanvir.click('button[aria-label="Close chat"]');
+    // Closing the panel swaps in a brand-new <video> (fresh video layer on phones that black out).
+    await tanvir.waitForFunction(() => { const v = document.querySelector(".mu-live-screen video"); return v && !v.dataset.old; }, { timeout: 5000 })
+      .catch(() => { throw new Error(`round ${round}: the video element wasn't replaced on close`); });
+    if (round === 3) {
+      await tanvir.waitForFunction(() => { const v = document.querySelector(".mu-live-screen video"); return v?.srcObject && v.videoWidth > 0 && !v.paused; }, { timeout: 5000 })
+        .catch(() => { throw new Error("closing the chat didn't bring a black live video back"); });
+    }
     await progressing(tanvir).catch(async (e) => {
       await tanvir.screenshot({ path: path.join(SHOTS, `x-tanvir-round${round}.png`) });
       throw new Error(`round ${round}: ${e.message}`);
