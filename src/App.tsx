@@ -17,6 +17,7 @@ import Notifications from "@/pages/profile/Notifications";
 import SettingsPage from "@/pages/profile/Settings";
 import CreateBusiness, { ProviderSetup } from "@/pages/profile/CreateBusiness";
 import { mu } from "@/api/mu";
+import { AccountDeletion, PrivacyPolicy } from "@/pages/public/Legal";
 import Admin from "@/pages/admin/Admin";
 
 /** Signed in and the account's profiles are loaded. */
@@ -56,6 +57,8 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/account-deletion" element={<AccountDeletion />} />
       <Route element={<RequireAccount />}>
         <Route element={<AppShell />}>
           <Route path="/chats" element={<ChatsLayout />}>

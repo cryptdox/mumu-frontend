@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AudioRenderer, Controls, MumuRoom, VideoTile, useParticipants, useRoom, type Participant } from "mumu-rtc/react";
-import { Phone, PhoneOff, Video } from "lucide-react";
+import { Ear, Phone, PhoneOff, Video, Volume2 } from "lucide-react";
 import { mu } from "@/api/mu";
 import type { CallInfo } from "@/api/types";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +11,7 @@ import { errorMessage } from "@/lib/api";
 import { rtcErrorText } from "@/lib/rtcError";
 import { Avatar, confirmAction, cx, toast } from "@/components/ui";
 import { useKeepVideosPlaying } from "@/lib/keepPlaying";
+import { callAudio, hasCallAudio } from "@/lib/callAudio";
 
 /** Start or join a call; the call screen opens as soon as there's a token. */
 /**
@@ -199,6 +200,38 @@ function CallTitle({ call }: { call: CallInfo }) {
   );
 }
 
+/**
+ * Earpiece ⇄ loud speaker (Android app only — browsers can't choose). Voice calls start on the
+ * earpiece, video calls on the speaker, like phone calls. Applied once connected, because the
+ * WebView picks its own route when the microphone opens.
+ */
+function SpeakerToggle({ video }: { video: boolean }) {
+  const { state } = useRoom();
+  const [speaker, setSpeaker] = useState(video);
+  const connected = state === "connected";
+  useEffect(() => {
+    if (!connected) return;
+    void callAudio.start(speaker);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- route is set by toggle() afterwards
+  }, [connected]);
+  useEffect(() => () => void callAudio.stop(), []);
+  const toggle = () => {
+    const on = !speaker;
+    setSpeaker(on);
+    void callAudio.setSpeaker(on);
+  };
+  return (
+    <button
+      onClick={toggle}
+      aria-label={speaker ? "Speaker on — switch to earpiece" : "Earpiece — switch to speaker"}
+      aria-pressed={speaker}
+      className={cx("flex size-12 shrink-0 items-center justify-center rounded-full transition active:scale-95", speaker ? "bg-white text-navy" : "bg-white/15 text-white")}
+    >
+      {speaker ? <Volume2 className="size-5" /> : <Ear className="size-5" />}
+    </button>
+  );
+}
+
 /** Full-screen call. Hanging up ends 1:1 calls for both; in groups you just leave. */
 export function ActiveCall() {
   const { active } = useStore(callStore);
@@ -220,7 +253,8 @@ export function ActiveCall() {
     <div className="fixed inset-0 z-50 flex flex-col bg-navy">
       <MumuRoom apiUrl={active.rtc.apiUrl} token={active.rtc.token} publish={publish} onError={(e) => toast(e.message, "error")}>
         <Stage call={active.call} />
-        <div className="safe-bottom flex justify-center pb-4">
+        <div className="safe-bottom flex items-center justify-center gap-3 pb-4">
+          {hasCallAudio() && <SpeakerToggle video={active.call.type === "VIDEO"} />}
           <Controls onLeave={hangUp} screenShare={active.call.type === "VIDEO"} />
         </div>
       </MumuRoom>

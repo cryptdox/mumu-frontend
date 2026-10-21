@@ -24,6 +24,7 @@ const before = (cursor?: string) => (cursor ? { before: cursor } : {});
 export const mu = {
   me: () => api<Account>("/api/me"),
   categories: () => api<Category[]>("/api/categories", { auth: false }),
+  deleteAccount: () => api<{ deletedProfiles: number }>("/api/me", { method: "DELETE" }),
   devices: () => api<{ max: number; devices: Device[] }>("/api/me/devices"),
   signOutDevice: (id: string) => api<void>(`/api/me/devices/${encodeURIComponent(id)}`, { method: "DELETE" }),
 

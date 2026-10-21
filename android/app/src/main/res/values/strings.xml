@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MuMu</string>
+    <string name="title_activity_main">MuMu</string>
+    <string name="package_name">mu.cryptdox.com</string>
+    <string name="custom_url_scheme">mu.cryptdox.com</string>
+</resources>

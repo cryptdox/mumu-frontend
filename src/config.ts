@@ -11,4 +11,8 @@ export const config = {
   turnstileSiteKey: env.VITE_TURNSTILE_SITE_KEY || (env.DEV ? TURNSTILE_TEST_SITE_KEY : ""),
 };
 
+/** Shown on the privacy policy and account deletion pages. */
+export const SUPPORT_EMAIL = env.VITE_SUPPORT_EMAIL || "cryptdox.ethos@gmail.com";
+export const APP_URL = "https://mu.cryptdox.com";
+
 export const LIMITS = { text: 500, imageBytes: 1024 * 1024 };

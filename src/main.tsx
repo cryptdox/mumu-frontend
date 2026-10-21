@@ -6,12 +6,14 @@ import { registerSW } from "virtual:pwa-register";
 import { queryClient } from "@/lib/query";
 import { AuthProvider } from "@/lib/auth";
 import "@/lib/theme";
+import { setupNativeApp } from "@/lib/native";
 import { ConfirmHost, Toaster } from "@/components/ui";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import App from "./App";
 import "./index.css";
 
 registerSW({ immediate: true });
+setupNativeApp();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

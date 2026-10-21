@@ -11,6 +11,9 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
     "@tanstack/react-query": "^5.104.5",
     "browser-image-compression": "^2.0.2",
     "lucide-react": "^1.60.0",
@@ -21,6 +24,7 @@
     "socket.io-client": "^4.8.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",

@@ -183,6 +183,16 @@ export default function SettingsPage() {
     onError: toastError,
   });
 
+  const deleteAccount = useMutation({
+    mutationFn: mu.deleteAccount,
+    onSuccess: async () => {
+      toast("Your MuMu account was deleted");
+      await logout();
+      navigate("/login");
+    },
+    onError: toastError,
+  });
+
   const themes: { value: Theme; label: string; icon: typeof Sun }[] = [
     { value: "light", label: "Light", icon: Sun },
     { value: "dark", label: "Dark", icon: Moon },
@@ -224,9 +234,28 @@ export default function SettingsPage() {
           )}
         </Card>
         <Card title="Account">
+          <p className="mb-3 text-sm text-muted">
+            <Link to="/privacy" className="font-semibold text-brand">Privacy policy</Link> · <Link to="/account-deletion" className="font-semibold text-brand">Account deletion</Link>
+          </p>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => void logout().then(() => navigate("/login"))}>
               <LogOut className="size-4" /> Sign out
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-danger hover:bg-danger/10"
+              loading={deleteAccount.isPending}
+              onClick={confirmThen(
+                {
+                  title: "Delete your MuMu account?",
+                  message: "All your profiles, posts, comments, messages, photos and lives are deleted for good. This can't be undone.",
+                  confirmLabel: "Delete everything",
+                  danger: true,
+                },
+                () => deleteAccount.mutate(),
+              )}
+            >
+              <Trash2 className="size-4" /> Delete my MuMu account
             </Button>
             {me.kind === "BUSINESS" && me.role === "OWNER" && (
               <Button variant="danger" loading={remove.isPending} onClick={confirmThen({ title: `Delete ${me.displayName}?`, message: "Its posts stay hidden and its people lose access. This can't be undone.", confirmLabel: "Delete", danger: true }, () => remove.mutate())}>

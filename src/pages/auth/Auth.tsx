@@ -87,6 +87,9 @@ export function Login() {
       <p className="mt-6 text-center text-sm text-muted">
         New here? <Link to="/register" className="font-semibold text-brand">Create an account</Link>
       </p>
+      <p className="mt-3 text-center text-xs text-muted">
+        <Link to="/privacy" className="hover:underline">Privacy policy</Link> · <Link to="/account-deletion" className="hover:underline">Delete account</Link>
+      </p>
     </AuthFrame>
   );
 }
