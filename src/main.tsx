@@ -7,6 +7,7 @@ import { queryClient } from "@/lib/query";
 import { AuthProvider } from "@/lib/auth";
 import "@/lib/theme";
 import { Toaster } from "@/components/ui";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import App from "./App";
 import "./index.css";
 
@@ -14,6 +15,7 @@ registerSW({ immediate: true });
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
@@ -22,5 +24,6 @@ createRoot(document.getElementById("root")!).render(
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
