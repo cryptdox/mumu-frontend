@@ -58,6 +58,13 @@ const waitPlaying = (page, n, timeout = 20000) =>
     const info = await page.evaluate(() => ({ videos: [...document.querySelectorAll("video")].map((v) => `${v.videoWidth}x${v.videoHeight}${v.paused ? " paused" : ""}`), text: document.body.innerText.slice(0, 120).replace(/\n/g, " | ") }));
     throw new Error(`expected ${n} playing videos: ${JSON.stringify(info)}`);
   });
+/** The live video keeps playing (its clock advances) over a few seconds. */
+const progressing = async (page) => {
+  const t1 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
+  await new Promise((r) => setTimeout(r, 4500));
+  const t2 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
+  if (!(t2 > t1 + 2)) throw new Error(`stream stalled (${t1} → ${t2})`);
+};
 const clickText = async (page, selector, text) => {
   await page.waitForFunction((s, t) => [...document.querySelectorAll(s)].some((e) => e.textContent?.includes(t)), { timeout: 10000 }, selector, text);
   await page.evaluate((s, t) => [...document.querySelectorAll(s)].find((e) => e.textContent?.includes(t)).click(), selector, text);
@@ -84,6 +91,21 @@ await step("hang up ends the call for both, and the chat shows the call", async 
   await rafi.waitForFunction(() => !document.querySelector(".mumu-controls"), { timeout: 10000 });
   await ayesha.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => /Video call/.test(b.textContent ?? "") && /\d:\d\d|\ds/.test(b.textContent ?? "")), { timeout: 10000 });
   await ayesha.screenshot({ path: path.join(SHOTS, "4-call-ended.png") });
+});
+
+await step("voice call: audio only, no camera", async () => {
+  await ayesha.goto(`${APP}/chats`, { waitUntil: "networkidle2" });
+  await clickText(ayesha, "a", "Rafi Hasan");
+  await ayesha.waitForSelector('button[aria-label="Voice call"]');
+  await ayesha.click('button[aria-label="Voice call"]');
+  await rafi.waitForSelector('button[aria-label="Accept"]', { timeout: 10000 });
+  await rafi.click('button[aria-label="Accept"]');
+  await rafi.waitForSelector(".mumu-controls", { timeout: 10000 });
+  await new Promise((r) => setTimeout(r, 4000));
+  const videos = await ayesha.evaluate(() => [...document.querySelectorAll("video")].filter((v) => v.videoWidth > 0).length);
+  if (videos) throw new Error(`a voice call showed ${videos} video(s)`);
+  await ayesha.click(".mumu-btn--leave");
+  await rafi.waitForFunction(() => !document.querySelector(".mumu-controls"), { timeout: 10000 });
 });
 
 // Rafi acts as his business Dhaka Bites.
@@ -127,12 +149,6 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
   await rafi.waitForFunction(() => document.body.innerText.includes("Smells amazing from here"), { timeout: 10000 });
   await rafi.waitForFunction(() => document.body.innerText.includes("Ayesha Rahman"), { timeout: 10000 });
   // Sending a chat message must not black out the stream (keyboard / layout changes).
-  const progressing = async (page) => {
-    const t1 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
-    await new Promise((r) => setTimeout(r, 4500));
-    const t2 = await page.evaluate(() => document.querySelector(".mu-live-screen video")?.currentTime ?? -1);
-    if (!(t2 > t1 + 2)) throw new Error(`stream stalled after chatting (${t1} → ${t2})`);
-  };
   await progressing(ayesha);
   await ayesha.screenshot({ path: path.join(SHOTS, "7a-viewer-chat-overlay.png") });
   // Tapping the chat opens the full history from the right; the video keeps playing behind it.

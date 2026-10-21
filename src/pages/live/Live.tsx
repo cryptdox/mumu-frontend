@@ -9,6 +9,7 @@ import { useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { liveTakeoverStore, useSocket } from "@/lib/realtime";
 import { useStore } from "@/lib/store";
+import { useKeepVideosPlaying } from "@/lib/keepPlaying";
 import { compact, shortTime } from "@/lib/format";
 import { errorCode, errorMessage } from "@/lib/api";
 import { rtcErrorText } from "@/lib/rtcError";
@@ -155,7 +156,7 @@ function ChatForm({ onSend, autoFocus }: { onSend: (text: string) => void; autoF
         autoFocus={autoFocus}
         placeholder="Say something…"
         aria-label="Live chat message"
-        className="h-10 min-w-0 flex-1 rounded-full bg-white/15 px-4 text-sm text-white outline-none backdrop-blur placeholder:text-white/60 focus:bg-white/20 focus-visible:outline-none"
+        className="h-10 min-w-0 flex-1 rounded-full bg-white/15 px-4 text-sm text-white outline-none placeholder:text-white/60 focus:bg-white/20 focus-visible:outline-none"
       />
       <IconButton type="submit" label="Send" className="bg-brand text-white hover:bg-brand-strong" disabled={!text.trim()}>
         <SendHorizontal className="size-4" />
@@ -214,7 +215,7 @@ function ChatOverlay() {
         })}
       </button>
       <div className="flex items-center gap-2 px-3 pb-3">
-        <IconButton label="Open live chat" onClick={() => setOpen(true)} className="relative bg-white/15 text-white backdrop-blur hover:bg-white/25">
+        <IconButton label="Open live chat" onClick={() => setOpen(true)} className="relative bg-white/15 text-white hover:bg-white/25">
           <MessageCircle className="size-5" />
           {messages.length > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-brand px-1 text-[10px] font-bold leading-4">{messages.length > 99 ? "99+" : messages.length}</span>}
         </IconButton>
@@ -226,7 +227,7 @@ function ChatOverlay() {
             role="dialog"
             aria-label="Live chat"
             onClick={(e) => e.stopPropagation()}
-            className="mu-drawer-in flex h-full w-[85%] max-w-sm flex-col bg-navy/95 text-white shadow-2xl backdrop-blur"
+            className="mu-drawer-in flex h-full w-[85%] max-w-sm flex-col bg-navy text-white shadow-2xl"
           >
             <div className="flex items-center justify-between px-4 pt-3">
               <p className="font-semibold">Live chat</p>
@@ -256,6 +257,7 @@ function Screen({ stream }: { stream: LiveStream }) {
   }, [hostHere, state, stream.liveStreamId]);
   const source = host?.tracks.screen ? "screen" : "camera";
   const showing = stream.status === "LIVE" && host && host.tracks[source] && !host.muted[source];
+  useKeepVideosPlaying(".mu-live-screen", !!showing);
   return (
     <div className="mu-live-screen absolute inset-0 flex items-center justify-center bg-black">
       <AudioRenderer />

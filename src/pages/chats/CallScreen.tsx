@@ -10,6 +10,7 @@ import { useStore } from "@/lib/store";
 import { errorMessage } from "@/lib/api";
 import { rtcErrorText } from "@/lib/rtcError";
 import { Avatar, cx, toast } from "@/components/ui";
+import { useKeepVideosPlaying } from "@/lib/keepPlaying";
 
 /** Start or join a call; the call screen opens as soon as there's a token. */
 export const startCall = {
@@ -100,10 +101,11 @@ function Stage({ call }: { call: CallInfo }) {
   const remote = participants.filter((p) => !p.isLocal);
   const local = participants.find((p) => p.isLocal);
   const waiting = remote.length === 0;
+  useKeepVideosPlaying(".mu-call-stage");
   useRingtone(waiting && call.status === "RINGING" && state === "connected", true);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+    <div className="mu-call-stage relative flex min-h-0 flex-1 flex-col p-3 sm:p-4">
       <AudioRenderer />
       {waiting ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-white">
