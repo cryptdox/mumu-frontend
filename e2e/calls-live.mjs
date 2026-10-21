@@ -276,6 +276,11 @@ await step("a personal profile on another device watches a business live; openin
       throw new Error(`round ${round}: ${e.message}`);
     });
   }
+  // What a phone browser does to "hidden" muted video: pause it. The app must restart it.
+  await tanvir.evaluate(() => document.querySelector(".mu-live-screen video").pause());
+  await tanvir.waitForFunction(() => !document.querySelector(".mu-live-screen video").paused, { timeout: 5000 })
+    .catch(() => { throw new Error("a paused live video wasn't restarted"); });
+  await progressing(tanvir);
   await tanvir.screenshot({ path: path.join(SHOTS, "11-viewer-after-comments.png") });
   await rafi.click(".mumu-btn--leave");
 });
