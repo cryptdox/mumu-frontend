@@ -141,6 +141,7 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
   await ayesha.screenshot({ path: path.join(SHOTS, "7b-viewer-chat-drawer.png") });
   await progressing(ayesha);
   await ayesha.click('button[aria-label="Close chat"]');
+  await progressing(ayesha).catch((e) => { throw new Error(`after closing the chat: ${e.message}`); });
   // The host chatting must not black out the stream either — on desktop and on a phone.
   for (const viewport of [null, { width: 390, height: 844, isMobile: true, hasTouch: true }]) {
     if (viewport) await rafi.setViewport(viewport);
@@ -220,6 +221,8 @@ await step("live on two devices: the second device asks, takes over, the first s
   await rafi.waitForFunction(() => location.pathname === "/live", { timeout: 10000 }).catch(() => {
     throw new Error("the first device didn't step off the live");
   });
+  await rafi.waitForFunction(() => document.body.innerText.includes("Live on another device"), { timeout: 10000 })
+    .catch(() => { throw new Error('the first device\'s live list should say "Live on another device"'); });
   await rafi.screenshot({ path: path.join(SHOTS, "10-first-device-after-takeover.png") });
   await ayesha.waitForFunction(() => { const v = document.querySelector(".mu-live-screen video"); return v && v.videoWidth > 0 && !v.paused; }, { timeout: 30000 })
     .catch(async () => {
@@ -229,6 +232,36 @@ await step("live on two devices: the second device asks, takes over, the first s
     });
   await rafi2.click(".mumu-btn--leave");
   await ayesha.waitForFunction(() => document.body.innerText.includes("This live has ended"), { timeout: 10000 });
+});
+
+await step("a personal profile on another device watches a business live; opening and closing the comments keeps the video", async () => {
+  // Rafi broadcasts as Dhaka Bites from his main device; Tanvir (a follower, not on the team) watches on a phone.
+  await rafi.goto(`${APP}/live`, { waitUntil: "networkidle2" });
+  await clickText(rafi, "button", "Go live");
+  await rafi.waitForSelector('input[placeholder="What\'s this live about?"]');
+  await rafi.type('input[placeholder="What\'s this live about?"]', "Comments test");
+  await clickText(rafi, "button", "Start live");
+  await waitPlaying(rafi, 1);
+  const tanvir = await personPage("tanvir", {}, "phone");
+  await tanvir.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  await tanvir.goto(rafi.url(), { waitUntil: "networkidle2" });
+  await waitPlaying(tanvir, 1);
+  for (let round = 1; round <= 3; round++) {
+    await tanvir.click('button[aria-label="Open live chat"]');
+    await tanvir.waitForSelector('aside[aria-label="Live chat"]');
+    if (round === 2) {
+      await tanvir.type('aside[aria-label="Live chat"] input', "Looks tasty!");
+      await tanvir.keyboard.press("Enter");
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+    await tanvir.click('button[aria-label="Close chat"]');
+    await progressing(tanvir).catch(async (e) => {
+      await tanvir.screenshot({ path: path.join(SHOTS, `x-tanvir-round${round}.png`) });
+      throw new Error(`round ${round}: ${e.message}`);
+    });
+  }
+  await tanvir.screenshot({ path: path.join(SHOTS, "11-viewer-after-comments.png") });
+  await rafi.click(".mumu-btn--leave");
 });
 
 await browser.close();
