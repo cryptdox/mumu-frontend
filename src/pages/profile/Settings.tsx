@@ -10,6 +10,7 @@ import { setTheme, themeStore, type Theme } from "@/lib/theme";
 import { useStore } from "@/lib/store";
 import { Avatar, Button, IconButton, Input, Name, Tabs, Textarea, confirmThen, cx, toast, toastError } from "@/components/ui";
 import { DevicesCard } from "./Devices";
+import { CategorySelect } from "@/components/CategorySelect";
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -23,11 +24,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function ProfileForm() {
   const me = useProfile();
   const { user } = useAuth();
-  const [form, setForm] = useState({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", category: me.category ?? "", website: me.website ?? "" });
+  const [form, setForm] = useState({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", categoryId: me.categoryId ?? "", website: me.website ?? "" });
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    setForm({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", category: me.category ?? "", website: me.website ?? "" });
+    setForm({ displayName: me.displayName, handle: me.handle, bio: me.bio ?? "", categoryId: me.categoryId ?? "", website: me.website ?? "" });
   }, [me.profileId]); // eslint-disable-line react-hooks/exhaustive-deps
   const canEdit = me.role !== "EDITOR";
   const refresh = () => {
@@ -41,7 +42,7 @@ function ProfileForm() {
         displayName: form.displayName.trim(),
         handle: form.handle.trim(),
         bio: form.bio.trim() || null,
-        ...(me.kind === "BUSINESS" && { category: form.category.trim() || null, website: form.website.trim() || null }),
+        ...(me.kind === "BUSINESS" && { categoryId: form.categoryId || null, website: form.website.trim() || null }),
       }),
     onSuccess: () => (refresh(), toast("Saved")),
     onError: toastError,
@@ -58,7 +59,7 @@ function ProfileForm() {
 
   const submit = (e: FormEvent) => (e.preventDefault(), save.mutate());
   return (
-    <Card title={me.kind === "BUSINESS" ? "Business profile" : "Your profile"}>
+    <Card title={me.kind === "BUSINESS" ? "Provider profile" : "Consumer profile"}>
       <div className="relative mb-12 h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-accent">
         {me.coverUrl && <img src={me.coverUrl} alt="" className="size-full object-cover" />}
         {canEdit && (
@@ -83,7 +84,7 @@ function ProfileForm() {
           <Input label="Handle" value={form.handle} maxLength={30} onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase() })} hint="Letters, digits, _ and . — your profile link is /u/handle" required />
           {me.kind === "BUSINESS" && (
             <>
-              <Input label="Category" value={form.category} maxLength={40} placeholder="Bakery, Software, Fashion…" onChange={(e) => setForm({ ...form, category: e.target.value })} />
+              <CategorySelect value={form.categoryId} onChange={(categoryId) => setForm({ ...form, categoryId })} />
               <Input label="Website" type="url" value={form.website} placeholder="https://" onChange={(e) => setForm({ ...form, website: e.target.value })} />
             </>
           )}
@@ -91,7 +92,7 @@ function ProfileForm() {
           <Button loading={save.isPending}>Save</Button>
         </form>
       ) : (
-        <p className="text-sm text-muted">You're an editor of this business — only its owner and admins can change the profile.</p>
+        <p className="text-sm text-muted">You're an editor of this provider — only its owner and admins can change the profile.</p>
       )}
       {me.kind === "PERSONAL" && <p className="mt-3 text-xs text-muted">Signed in as {user?.email}</p>}
     </Card>
@@ -134,6 +135,35 @@ function Members() {
   );
 }
 
+/** Your hidden Consumer (personal) profile: switch to it to use MuMu as a customer. */
+function ConsumerMode() {
+  const me = useProfile();
+  const { profiles, switchProfile, account } = useAuth();
+  const navigate = useNavigate();
+  const consumer = profiles.find((p) => p.kind === "PERSONAL");
+  const provider = profiles.find((p) => p.kind === "BUSINESS");
+  if (!consumer || (!account?.settings.consumerModeEnabled && me.kind !== "PERSONAL")) return null;
+  const asConsumer = me.kind === "PERSONAL";
+  return (
+    <Card title="Consumer mode">
+      <p className="mb-3 text-sm text-muted">
+        {asConsumer
+          ? "You're using MuMu as a consumer — your personal profile. Switch back to act as your provider."
+          : "Use MuMu as a customer with your personal profile, separate from your provider profiles."}
+      </p>
+      <Button
+        variant={asConsumer ? "primary" : "secondary"}
+        onClick={() => {
+          const target = asConsumer ? provider : consumer;
+          if (target) (switchProfile(target.profileId), navigate("/chats"));
+        }}
+      >
+        {asConsumer ? `Back to ${provider?.displayName ?? "provider"}` : "Switch to consumer"}
+      </Button>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const me = useProfile();
   const { logout, switchProfile, profiles } = useAuth();
@@ -144,9 +174,10 @@ export default function SettingsPage() {
   const remove = useMutation({
     mutationFn: () => mu.profiles.remove(me.profileId),
     onSuccess: () => {
-      switchProfile(profiles.find((p) => p.kind === "PERSONAL")!.profileId);
+      const next = profiles.find((p) => p.kind === "BUSINESS" && p.profileId !== me.profileId) ?? profiles.find((p) => p.kind === "PERSONAL");
+      if (next) switchProfile(next.profileId);
       void queryClient.invalidateQueries({ queryKey: ["me"] });
-      toast("Business profile deleted");
+      toast("Provider profile deleted");
       navigate("/chats");
     },
     onError: toastError,
@@ -177,6 +208,7 @@ export default function SettingsPage() {
             ))}
           </div>
         </Card>
+        <ConsumerMode />
         <DevicesCard />
         <Card title="Blocked">
           {blocks.data?.length ? (
@@ -198,7 +230,7 @@ export default function SettingsPage() {
             </Button>
             {me.kind === "BUSINESS" && me.role === "OWNER" && (
               <Button variant="danger" loading={remove.isPending} onClick={confirmThen({ title: `Delete ${me.displayName}?`, message: "Its posts stay hidden and its people lose access. This can't be undone.", confirmLabel: "Delete", danger: true }, () => remove.mutate())}>
-                <Trash2 className="size-4" /> Delete business profile
+                <Trash2 className="size-4" /> Delete provider profile
               </Button>
             )}
           </div>

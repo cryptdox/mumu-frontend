@@ -9,13 +9,38 @@ import { callStore } from "@/lib/realtime";
 import { useStore } from "@/lib/store";
 import { errorMessage } from "@/lib/api";
 import { rtcErrorText } from "@/lib/rtcError";
-import { Avatar, cx, toast } from "@/components/ui";
+import { Avatar, confirmAction, cx, toast } from "@/components/ui";
 import { useKeepVideosPlaying } from "@/lib/keepPlaying";
 
 /** Start or join a call; the call screen opens as soon as there's a token. */
+/**
+ * Leave the call you're in. 1:1 calls (and group calls you started) end for everyone;
+ * otherwise you just drop out and the others carry on.
+ */
+export function leaveActiveCall(myProfileId?: string) {
+  const active = callStore.get().active;
+  if (!active) return;
+  callStore.set((c) => ({ ...c, active: null }));
+  const { call } = active;
+  if (call.conversation?.type !== "GROUP" || call.startedBy?.profileId === myProfileId) void mu.calls.end(call.callId).catch(() => {});
+}
+
+/** In a call already? Warn; on confirm hang it up so the new one can start. */
+async function replaceActiveCall(myProfileId?: string) {
+  if (!callStore.get().active) return true;
+  const ok = await confirmAction({
+    title: "You're in a call",
+    message: "Hang up the current call and start this one?",
+    confirmLabel: "Hang up & call",
+    danger: true,
+  });
+  if (ok) leaveActiveCall(myProfileId);
+  return ok;
+}
+
 export const startCall = {
-  async start(conversationId: string, type: "AUDIO" | "VIDEO") {
-    if (callStore.get().active) return toast("You're already in a call");
+  async start(conversationId: string, type: "AUDIO" | "VIDEO", myProfileId?: string) {
+    if (!(await replaceActiveCall(myProfileId))) return;
     try {
       const { call, rtc } = await mu.calls.start(conversationId, type);
       callStore.set({ incoming: null, active: { call, rtc } });
@@ -23,7 +48,10 @@ export const startCall = {
       toast(errorMessage(err), "error");
     }
   },
-  async join(callId: string) {
+  async join(callId: string, myProfileId?: string) {
+    const current = callStore.get().active;
+    if (current?.call.callId === callId) return; // already in this one
+    if (!(await replaceActiveCall(myProfileId))) return;
     try {
       const { call, rtc } = await mu.calls.join(callId);
       callStore.set({ incoming: null, active: { call, rtc } });
@@ -185,10 +213,7 @@ export function ActiveCall() {
   const hangUp = () => {
     if (ended.current) return;
     ended.current = true;
-    const { call } = active;
-    callStore.set((c) => ({ ...c, active: null }));
-    const canEnd = call.conversation?.type !== "GROUP" || call.startedBy?.profileId === profile?.profileId;
-    if (canEnd) void mu.calls.end(call.callId).catch(() => {});
+    leaveActiveCall(profile?.profileId);
   };
 
   return (
@@ -217,7 +242,7 @@ export function IncomingCall() {
   const accept = () => {
     // Answer as the profile that was called (you may be looking at another one).
     if (incoming.to && incoming.to !== profile?.profileId) switchProfile(incoming.to);
-    void startCall.join(incoming.callId);
+    void startCall.join(incoming.callId, incoming.to ?? profile?.profileId);
   };
   return (
     <div className="fixed inset-x-0 top-0 z-50 flex justify-center p-3">

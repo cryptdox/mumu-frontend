@@ -16,14 +16,14 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: st
           <span className="text-2xl font-bold">MuMu</span>
         </div>
         <div>
-          <h2 className="max-w-md text-4xl font-bold leading-tight">Chat, share and go live — with people and the businesses you love.</h2>
+          <h2 className="max-w-md text-4xl font-bold leading-tight">Chat, share and go live — the network for providers and the people they serve.</h2>
           <ul className="mt-8 space-y-3 text-white/90">
             <li className="flex items-center gap-3"><MessageCircle className="size-5" /> Private and group chats, voice and video calls</li>
-            <li className="flex items-center gap-3"><Sparkles className="size-5" /> Short posts with a photo, for friends or everyone</li>
-            <li className="flex items-center gap-3"><Radio className="size-5" /> Go live as yourself or as your business</li>
+            <li className="flex items-center gap-3"><Sparkles className="size-5" /> Short posts with a photo, for your connections or everyone</li>
+            <li className="flex items-center gap-3"><Radio className="size-5" /> Go live as your business</li>
           </ul>
         </div>
-        <p className="text-sm text-white/70">Switch between your personal and business profiles any time.</p>
+        <p className="text-sm text-white/70">Connect with other providers. Run several provider profiles from one account.</p>
         <div className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-32 right-24 size-80 rounded-full bg-white/10" />
       </div>
@@ -123,7 +123,7 @@ export function Register() {
     );
   }
   return (
-    <AuthFrame title="Create your account" subtitle="One account — a personal profile, plus business profiles whenever you need them.">
+    <AuthFrame title="Create your account" subtitle="Set up your provider profile right after — it takes a minute.">
       <form onSubmit={submit} className="space-y-4">
         <Input label="Your name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
         <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />

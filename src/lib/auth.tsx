@@ -111,7 +111,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const me = useQuery({ queryKey: ["me", session?.user.userId], queryFn: mu.me, enabled: !!session, staleTime: 60_000 });
 
   const profiles = me.data?.profiles ?? [];
-  const profile = profiles.find((p) => p.profileId === session?.profileId) ?? profiles.find((p) => p.kind === "PERSONAL");
+  // Providers first: the chosen profile, else your first Provider, else (before setup) the Consumer.
+  const profile =
+    profiles.find((p) => p.profileId === session?.profileId) ?? profiles.find((p) => p.kind === "BUSINESS") ?? profiles.find((p) => p.kind === "PERSONAL");
+
+  // Make the default explicit so every request acts as it (x-profile-id).
+  useEffect(() => {
+    if (profile && current && current.profileId !== profile.profileId) setSession({ ...current, profileId: profile.profileId });
+  }, [profile?.profileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Forget a profile you no longer manage (removed as admin, page deleted).
   useEffect(() => {
@@ -122,8 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchProfile = useCallback((profileId: string) => {
     if (!current) return;
-    const personal = queryClient.getQueryData<Account>(["me", current.user.userId])?.profiles.find((p) => p.kind === "PERSONAL");
-    setSession({ ...current, profileId: profileId === personal?.profileId ? undefined : profileId });
+    setSession({ ...current, profileId });
   }, []);
 
   const login = useCallback<AuthValue["login"]>(async ({ email, password, captchaToken }) => {

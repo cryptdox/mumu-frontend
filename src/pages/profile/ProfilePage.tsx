@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Ban, Flag, Globe, MessageCircle, MoreHorizontal, Settings, UserCheck, UserMinus, UserPlus } from "lucide-react";
+import { ArrowLeft, Ban, Flag, Globe, MessageCircle, MoreHorizontal, Settings, Share2, UserCheck, UserMinus, UserPlus } from "lucide-react";
 import { mu } from "@/api/mu";
 import type { ProfileView } from "@/api/types";
 import { useAuth, useProfile } from "@/lib/auth";
@@ -14,7 +14,6 @@ import { PersonRow } from "@/pages/chats/NewChat";
 import { PostCard } from "@/pages/feed/PostCard";
 
 function Relationship({ p }: { p: ProfileView }) {
-  const me = useProfile();
   const navigate = useNavigate();
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["profile-view", p.handle] });
   const act = useMutation({ mutationFn: (fn: () => Promise<unknown>) => fn(), onSuccess: refresh, onError: toastError });
@@ -24,7 +23,7 @@ function Relationship({ p }: { p: ProfileView }) {
     onError: toastError,
   });
   const r = p.relationship;
-  const canFriend = me.kind === "PERSONAL" && p.kind === "PERSONAL";
+  const canFriend = !r.isSelf;
   return (
     <div className="flex flex-wrap gap-2">
       <Button onClick={() => message.mutate()} loading={message.isPending}>
@@ -33,11 +32,11 @@ function Relationship({ p }: { p: ProfileView }) {
       {canFriend &&
         (r.friendStatus === "FRIENDS" ? (
           <Button variant="secondary" onClick={() => act.mutate(() => mu.connections.removeFriend(p.profileId))}>
-            <UserCheck className="size-4" /> Friends
+            <UserCheck className="size-4" /> Connected
           </Button>
         ) : r.friendStatus === "REQUEST_RECEIVED" ? (
           <Button variant="accent" onClick={() => act.mutate(() => mu.connections.accept(p.profileId))}>
-            <UserPlus className="size-4" /> Accept request
+            <UserPlus className="size-4" /> Accept
           </Button>
         ) : r.friendStatus === "REQUEST_SENT" ? (
           <Button variant="secondary" onClick={() => act.mutate(() => mu.connections.removeFriend(p.profileId))}>
@@ -45,7 +44,7 @@ function Relationship({ p }: { p: ProfileView }) {
           </Button>
         ) : (
           <Button variant="secondary" onClick={() => act.mutate(() => mu.connections.addFriend(p.profileId))}>
-            <UserPlus className="size-4" /> Add friend
+            <UserPlus className="size-4" /> Connect
           </Button>
         ))}
       <Button variant={r.following ? "secondary" : p.kind === "BUSINESS" ? "accent" : "secondary"} onClick={() => act.mutate(() => (r.following ? mu.connections.unfollow(p.profileId) : mu.connections.follow(p.profileId)))}>
@@ -53,6 +52,20 @@ function Relationship({ p }: { p: ProfileView }) {
       </Button>
     </div>
   );
+}
+
+/** Share the profile link — opening it shows the profile with Connect / Follow / Message. */
+async function shareProfile(p: { handle: string; displayName: string }) {
+  const url = `${location.origin}/u/${p.handle}`;
+  try {
+    if (navigator.share) await navigator.share({ title: p.displayName, text: `${p.displayName} on MuMu`, url });
+    else {
+      await navigator.clipboard.writeText(url);
+      toast("Profile link copied");
+    }
+  } catch {
+    // share sheet closed
+  }
 }
 
 export default function ProfilePage() {
@@ -87,7 +100,7 @@ export default function ProfilePage() {
   const managesIt = profiles.some((x) => x.profileId === p.profileId);
   const all = posts.data?.pages.flat() ?? [];
   const stats = [
-    ...(p.kind === "PERSONAL" ? [{ key: "friends" as const, n: p.counts.friends, label: "Friends" }] : []),
+    { key: "friends" as const, n: p.counts.friends, label: "Connections" },
     { key: "followers" as const, n: p.counts.followers, label: "Followers" },
     { key: "following" as const, n: p.counts.following, label: "Following" },
   ];
@@ -107,6 +120,7 @@ export default function ProfilePage() {
               <Avatar profile={p} size={96} online={p.online && !p.relationship.isSelf} />
             </span>
             <div className="flex gap-1 pb-1">
+              <IconButton label="Share profile" onClick={() => void shareProfile(p)}><Share2 className="size-5" /></IconButton>
               {managesIt ? (
                 <Link to="/settings"><Button variant="secondary" size="sm"><Settings className="size-4" /> Edit profile</Button></Link>
               ) : (
@@ -148,7 +162,7 @@ export default function ProfilePage() {
 
       <Sheet open={menu} onClose={() => setMenu(false)} title={p.displayName}>
         <div className="grid gap-1">
-          <SheetAction icon={<Ban />} label={p.relationship.blocked ? "Unblock" : `Block ${p.kind === "BUSINESS" ? "this business" : p.displayName}`} danger onClick={() => { setMenu(false); if (p.relationship.blocked) return block.mutate(); void confirmAction({ title: `Block ${p.displayName}?`, message: "You won't see each other's posts or lives, and they can't message or call you. Friendship and follows end.", confirmLabel: "Block", danger: true }).then((ok) => ok && block.mutate()); }} />
+          <SheetAction icon={<Ban />} label={p.relationship.blocked ? "Unblock" : `Block ${p.displayName}`} danger onClick={() => { setMenu(false); if (p.relationship.blocked) return block.mutate(); void confirmAction({ title: `Block ${p.displayName}?`, message: "You won't see each other's posts or lives, and they can't message or call you. Your connection and follows end.", confirmLabel: "Block", danger: true }).then((ok) => ok && block.mutate()); }} />
           <SheetAction
             icon={<Flag />}
             label="Report profile"

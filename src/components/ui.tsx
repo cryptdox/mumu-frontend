@@ -121,7 +121,7 @@ export function Name({ profile, className }: { profile: Pick<ProfileCard, "displ
     <span className={cx("inline-flex min-w-0 items-center gap-1 font-semibold", className)}>
       <span className="truncate">{profile.displayName}</span>
       {profile.isVerified && <BadgeCheck className="size-4 shrink-0 fill-brand text-white" aria-label="Verified" />}
-      {profile.kind === "BUSINESS" && <Building2 className="size-3.5 shrink-0 text-accent" aria-label="Business" />}
+      {profile.kind === "BUSINESS" && <Building2 className="size-3.5 shrink-0 text-accent" aria-label="Provider" />}
     </span>
   );
 }
@@ -253,7 +253,7 @@ export function Tabs<T extends string>({ value, onChange, items }: { value: T; o
 // ── Audience ────────────────────────────────────────────────────────────────
 
 export function audienceLabel(a: Audience, kind: ProfileKind = "PERSONAL") {
-  return a === "PUBLIC" ? "Public" : a === "ONLY_ME" ? "Only me" : kind === "BUSINESS" ? "Followers" : "Friends";
+  return a === "PUBLIC" ? "Public" : a === "ONLY_ME" ? "Only me" : kind === "BUSINESS" ? "Connections & followers" : "Connections";
 }
 export function AudienceIcon({ audience, className = "size-3.5" }: { audience: Audience; className?: string }) {
   return audience === "PUBLIC" ? <Globe2 className={className} /> : audience === "ONLY_ME" ? <Lock className={className} /> : <Users className={className} />;

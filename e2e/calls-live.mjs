@@ -186,6 +186,15 @@ await step("live: Rafi goes live as Dhaka Bites (followers only), Ayesha (a foll
   await rafi.waitForFunction(() => document.body.innerText.includes("Ayesha Rahman"), { timeout: 10000 });
   // Sending a chat message must not black out the stream (keyboard / layout changes).
   await progressing(ayesha);
+  // Reactions: tap the heart → tray → emojis float on everyone's screen (the host's too).
+  await ayesha.click('button[aria-label="React"]');
+  await ayesha.waitForSelector('[role="group"][aria-label="React"] button[aria-label="Love"]');
+  for (let i = 0; i < 3; i++) await ayesha.click('[role="group"][aria-label="React"] button[aria-label="Love"]');
+  await ayesha.click('[role="group"][aria-label="React"] button[aria-label="Haha"]');
+  await rafi.waitForFunction(() => document.querySelectorAll(".mu-float").length > 0, { timeout: 5000 })
+    .catch(() => { throw new Error("the host didn't see the viewer's reactions float"); });
+  await rafi.screenshot({ path: path.join(SHOTS, "7c-host-sees-reactions.png") });
+  await ayesha.click('button[aria-label="React"]'); // close the tray
   await ayesha.screenshot({ path: path.join(SHOTS, "7a-viewer-chat-overlay.png") });
   // Tapping the chat opens the full history from the right; the video keeps playing behind it.
   await ayesha.click('button[aria-label="Open live chat"]');
@@ -295,6 +304,34 @@ await step("live on two devices: the second device asks, takes over, the first s
     });
   await rafi2.click(".mumu-btn--leave");
   await ayesha.waitForFunction(() => document.body.innerText.includes("This live has ended"), { timeout: 10000 });
+});
+
+await step("going live while already live warns, and on confirm ends the old live and starts the new one", async () => {
+  await rafi.goto(`${APP}/live`, { waitUntil: "networkidle2" });
+  const goLive = async (title) => {
+    await clickText(rafi, "button", "Go live");
+    await rafi.waitForSelector('input[placeholder="What\'s this live about?"]');
+    await rafi.type('input[placeholder="What\'s this live about?"]', title);
+    await clickText(rafi, "button", "Start live");
+  };
+  await goLive("First take");
+  await waitPlaying(rafi, 1);
+  const firstUrl = rafi.url();
+  await rafi.goto(`${APP}/live`, { waitUntil: "networkidle2" });
+  await goLive("Second take");
+  await rafi.waitForSelector('[role="alertdialog"]', { timeout: 10000 }).catch(() => { throw new Error("no warning when already live"); });
+  await rafi.screenshot({ path: path.join(SHOTS, "13-already-live-warning.png") });
+  await clickText(rafi, "button", "End it & go live");
+  await rafi.waitForFunction((u) => location.pathname.startsWith("/live/") && location.href !== u, { timeout: 15000 }, firstUrl);
+  await waitPlaying(rafi, 1);
+  const firstId = new URL(firstUrl).pathname.split("/").pop();
+  const status = await rafi.evaluate(async (api, id) => {
+    const s = JSON.parse(localStorage.getItem("mu.session"));
+    const r = await fetch(`${api}/api/live/${id}`, { headers: { authorization: `Bearer ${s.accessToken}`, "x-profile-id": s.profileId, "x-device-id": localStorage.getItem("mu.device") } });
+    return (await r.json()).data.status;
+  }, process.env.API_URL ?? "http://localhost:4101", firstId);
+  if (status !== "ENDED") throw new Error(`the old live is ${status}, expected ENDED`);
+  await rafi.click(".mumu-btn--leave");
 });
 
 await step("a personal profile on another device watches a business live; opening and closing the comments keeps the video", async () => {

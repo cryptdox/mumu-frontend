@@ -81,7 +81,7 @@ export function NewChatSheet({ open, onClose }: { open: boolean; onClose: () => 
         </div>
       )}
       <div className="mt-4">
-        <Input placeholder="Search people and businesses" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <Input placeholder="Search providers and people" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
       </div>
       <div className="mt-2 min-h-40">
         {results.isFetching && <Spinner className="mx-auto mt-6 block" />}

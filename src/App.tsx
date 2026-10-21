@@ -15,8 +15,9 @@ import { LiveHome, LiveRoom } from "@/pages/live/Live";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import Notifications from "@/pages/profile/Notifications";
 import SettingsPage from "@/pages/profile/Settings";
-import CreateBusiness from "@/pages/profile/CreateBusiness";
+import CreateBusiness, { ProviderSetup } from "@/pages/profile/CreateBusiness";
 import { mu } from "@/api/mu";
+import Admin from "@/pages/admin/Admin";
 
 /** Signed in and the account's profiles are loaded. */
 function RequireAccount() {
@@ -38,7 +39,8 @@ function RequireAccount() {
       </div>
     );
   }
-  if (!profile) return <div className="flex h-dvh"><Loading /></div>;
+  if (!profile || !me.data) return <div className="flex h-dvh"><Loading /></div>;
+  if (me.data.needsSetup) return <ProviderSetup />;
   return (
     <RealtimeProvider>
       <Outlet />
@@ -68,6 +70,7 @@ export default function App() {
           <Route path="/u/:handle" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/business/new" element={<CreateBusiness />} />
+          <Route path="/admin/*" element={<Admin />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/chats" replace />} />

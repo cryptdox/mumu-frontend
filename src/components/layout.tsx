@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Check, Home, MessageCircle, Plus, Radio, Settings } from "lucide-react";
+import { Bell, Check, Home, MessageCircle, Plus, Radio, Settings, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { unreadStore } from "@/lib/realtime";
 import { useStore } from "@/lib/store";
@@ -31,12 +31,14 @@ function Badge({ n }: { n: number }) {
 
 /** Switch between your personal and business profiles. */
 export function ProfileSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { profiles, profile, switchProfile } = useAuth();
+  const { profiles, profile, switchProfile, account } = useAuth();
   const navigate = useNavigate();
+  // Providers only — the Consumer profile is switched to from Settings (consumer mode).
+  const shown = profiles.filter((p) => p.kind === "BUSINESS" || p.profileId === profile?.profileId);
   return (
     <Sheet open={open} onClose={onClose} title="Switch profile">
       <ul className="space-y-1">
-        {profiles.map((p) => (
+        {shown.map((p) => (
           <li key={p.profileId}>
             <button
               onClick={() => {
@@ -50,7 +52,7 @@ export function ProfileSwitcher({ open, onClose }: { open: boolean; onClose: () 
               <span className="min-w-0 flex-1">
                 <Name profile={p} />
                 <span className="block truncate text-sm text-muted">
-                  @{p.handle} · {p.kind === "PERSONAL" ? "Personal" : p.role.toLowerCase()}
+                  @{p.handle} · {p.kind === "PERSONAL" ? "Consumer" : p.role.toLowerCase()}
                 </span>
               </span>
               {p.profileId === profile?.profileId && <Check className="size-5 text-brand" />}
@@ -63,8 +65,16 @@ export function ProfileSwitcher({ open, onClose }: { open: boolean; onClose: () 
           <span className="flex size-11 items-center justify-center rounded-[30%] bg-brand/10">
             <Plus className="size-5" />
           </span>
-          Create a business profile
+          New provider profile
         </Link>
+        {account?.isAdmin && (
+          <Link to="/admin" onClick={onClose} className="flex items-center gap-3 rounded-2xl p-2.5 font-semibold hover:bg-surface-2">
+            <span className="flex size-11 items-center justify-center rounded-full bg-accent/15 text-accent-strong">
+              <Shield className="size-5" />
+            </span>
+            Admin panel
+          </Link>
+        )}
         <Link to="/settings" onClick={onClose} className="flex items-center gap-3 rounded-2xl p-2.5 font-semibold hover:bg-surface-2">
           <span className="flex size-11 items-center justify-center rounded-full bg-surface-2">
             <Settings className="size-5" />
@@ -77,7 +87,7 @@ export function ProfileSwitcher({ open, onClose }: { open: boolean; onClose: () 
 }
 
 export function AppShell() {
-  const { profile } = useAuth();
+  const { profile, account } = useAuth();
   const badges = useBadges();
   const location = useLocation();
   const [switcher, setSwitcher] = useState(false);
@@ -108,13 +118,23 @@ export function AppShell() {
             <span className="hidden xl:inline">{label}</span>
           </NavLink>
         ))}
+        {account?.isAdmin && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) => cx("flex items-center gap-3 rounded-2xl p-3 font-semibold transition xl:px-3", isActive ? "bg-accent/15 text-accent-strong" : "text-muted hover:bg-surface-2 hover:text-ink")}
+            title="Admin"
+          >
+            <Shield className="size-6" />
+            <span className="hidden xl:inline">Admin</span>
+          </NavLink>
+        )}
         <div className="mt-auto" />
         {profile && (
           <button onClick={() => setSwitcher(true)} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-surface-2" title="Switch profile">
             <Avatar profile={profile} size={40} ring={profile.kind === "BUSINESS"} />
             <span className="hidden min-w-0 text-left xl:block">
               <Name profile={profile} className="text-sm" />
-              <span className="block truncate text-xs text-muted">{profile.kind === "BUSINESS" ? "Business" : "Personal"} · switch</span>
+              <span className="block truncate text-xs text-muted">{profile.kind === "BUSINESS" ? "Provider" : "Consumer"} · switch</span>
             </span>
           </button>
         )}

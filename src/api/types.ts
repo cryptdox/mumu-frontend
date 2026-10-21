@@ -15,6 +15,7 @@ export interface ProfileCard {
 export interface Profile extends ProfileCard {
   bio: string | null;
   category: string | null;
+  categoryId?: string | null;
   website: string | null;
   coverUrl?: string | null;
   createdAt: string;
@@ -28,6 +29,19 @@ export interface Account {
   userId: string;
   email: string;
   profiles: MyProfile[];
+  /** No Provider profile yet — show the setup screen. */
+  needsSetup: boolean;
+  /** May open the admin panel (IAM ADMIN role of client mu). */
+  isAdmin: boolean;
+  settings: { consumerModeEnabled: boolean; liveEnabled: boolean };
+}
+
+export interface Category {
+  categoryId: string;
+  name: string;
+  sortOrder?: number;
+  isActive?: boolean;
+  _count?: { profiles: number };
 }
 
 export interface ProfileView extends Profile {

@@ -391,10 +391,10 @@ export default function Thread() {
             <span className={cx("block truncate text-xs", typingNames.length || partner?.online ? "text-brand" : "text-muted")}>{status}</span>
           </span>
         </Link>
-        <IconButton label="Voice call" onClick={() => void startCall.start(id, "AUDIO")} className="text-brand">
+        <IconButton label="Voice call" onClick={() => void startCall.start(id, "AUDIO", me.profileId)} className="text-brand">
           <Phone className="size-5" />
         </IconButton>
-        <IconButton label="Video call" onClick={() => void startCall.start(id, "VIDEO")} className="text-brand">
+        <IconButton label="Video call" onClick={() => void startCall.start(id, "VIDEO", me.profileId)} className="text-brand">
           <Video className="size-5" />
         </IconButton>
         <IconButton label="More" onClick={() => setMenu(true)}>

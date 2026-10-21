@@ -11,8 +11,8 @@ import { Avatar, Empty, ErrorNote, IconButton, Loading, cx, toastError } from "@
 import { TopBar } from "@/components/layout";
 
 const text: Record<Notification["type"], string> = {
-  FRIEND_REQUEST: "sent you a friend request",
-  FRIEND_ACCEPTED: "accepted your friend request",
+  FRIEND_REQUEST: "wants to connect",
+  FRIEND_ACCEPTED: "accepted your connection request",
   NEW_FOLLOWER: "started following you",
   POST_REACTION: "reacted to your post",
   POST_COMMENT: "commented on your post",
@@ -48,7 +48,7 @@ function Requests() {
   if (!reqs.data?.length) return null;
   return (
     <section className="border-b border-line bg-surface px-4 py-3 sm:rounded-3xl sm:border">
-      <h2 className="mb-2 text-sm font-bold">Friend requests · {reqs.data.length}</h2>
+      <h2 className="mb-2 text-sm font-bold">Connection requests · {reqs.data.length}</h2>
       {reqs.data.map(({ profile }) => (
         <div key={profile.profileId} className="flex items-center gap-3 py-1.5">
           <Link to={`/u/${profile.handle}`}><Avatar profile={profile} size={44} /></Link>

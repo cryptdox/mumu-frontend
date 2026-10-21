@@ -2,18 +2,18 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type F
 import { Link, useNavigate, useOutletContext, useParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AudioRenderer, Controls, MumuRoom, VideoTile, useParticipants, useRoom } from "mumu-rtc/react";
-import { ArrowLeft, Eye, MessageCircle, Radio, SendHorizontal, Users, X } from "lucide-react";
+import { ArrowLeft, Eye, Heart, MessageCircle, Radio, SendHorizontal, Users, X } from "lucide-react";
 import { mu } from "@/api/mu";
-import type { Audience, Comment, LiveStream, RtcJoin } from "@/api/types";
-import { useProfile } from "@/lib/auth";
+import type { Audience, Comment, LiveStream, ProfileCard, RtcJoin } from "@/api/types";
+import { useAuth, useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
 import { liveTakeoverStore, useSocket } from "@/lib/realtime";
 import { createStore, useStore } from "@/lib/store";
 import { useKeepVideosPlaying } from "@/lib/keepPlaying";
 import { compact, shortTime } from "@/lib/format";
-import { errorCode, errorMessage } from "@/lib/api";
+import { ApiError, errorCode, errorMessage } from "@/lib/api";
 import { rtcErrorText } from "@/lib/rtcError";
-import { AudiencePicker, AudienceIcon, Avatar, Button, Empty, ErrorNote, IconButton, Input, Loading, Name, Sheet, audienceLabel, cx, toast, toastError } from "@/components/ui";
+import { AudiencePicker, AudienceIcon, Avatar, Button, confirmAction, Empty, ErrorNote, IconButton, Input, Loading, Name, Sheet, audienceLabel, cx, toast, toastError } from "@/components/ui";
 import { TopBar } from "@/components/layout";
 
 // ── Live now ────────────────────────────────────────────────────────────────
@@ -40,8 +40,11 @@ function StreamCard({ s }: { s: LiveStream }) {
   );
 }
 
+const KEPT = "kept-current-live";
+
 export function LiveHome() {
   const me = useProfile();
+  const { account } = useAuth();
   const navigate = useNavigate();
   const { openSwitcher } = useOutletContext<{ openSwitcher: () => void }>();
   const live = useQuery({ queryKey: ["live"], queryFn: mu.live.list, refetchInterval: 20_000 });
@@ -49,29 +52,42 @@ export function LiveHome() {
   const [title, setTitle] = useState("");
   const [audience, setAudience] = useState<Audience>("PUBLIC");
   const start = useMutation({
-    mutationFn: () => mu.live.start(title.trim(), audience),
+    // Already live (e.g. left running on another device)? Warn; on confirm the old live ends.
+    mutationFn: async () => {
+      try {
+        return await mu.live.start(title.trim(), audience);
+      } catch (err) {
+        if (errorCode(err) !== "ALREADY_LIVE") throw err;
+        const running = (err as ApiError).errors as { title?: string };
+        const ok = await confirmAction({
+          title: "You're already live",
+          message: `“${running.title ?? "Your live"}” is still running. End it and start this new live?`,
+          confirmLabel: "End it & go live",
+          danger: true,
+        });
+        if (!ok) throw new Error(KEPT);
+        return mu.live.start(title.trim(), audience, true);
+      }
+    },
     onSuccess: ({ stream, rtc }) => {
       queryClient.setQueryData(["live", stream.liveStreamId], stream);
       queryClient.setQueryData(["live-join", stream.liveStreamId, false], { stream, rtc });
       setOpen(false);
       navigate(`/live/${stream.liveStreamId}`);
     },
-    onError: toastError,
+    onError: (err) => (err as Error).message !== KEPT && toastError(err),
   });
   const mine = live.data?.find((s) => s.hostProfileId === me.profileId);
 
   return (
     <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
       <TopBar title="Live" onAvatar={openSwitcher}>
-        {mine ? (
+        {mine && (
           <Link to={`/live/${mine.liveStreamId}`}>
-            {mine.onThisDevice === false ? (
-              <Button size="sm" variant="secondary">Live on another device</Button>
-            ) : (
-              <Button size="sm" variant="danger">Back to your live</Button>
-            )}
+            <Button size="sm" variant="secondary">{mine.onThisDevice === false ? "Live on another device" : "Back to your live"}</Button>
           </Link>
-        ) : (
+        )}
+        {account?.settings.liveEnabled !== false && (
           <Button size="sm" variant="danger" onClick={() => setOpen(true)}>
             <Radio className="size-4" /> Go live
           </Button>
@@ -87,7 +103,7 @@ export function LiveHome() {
           </div>
         ) : (
           <Empty icon={<Radio className="size-8" />} title="Nobody's live right now">
-            Go live {me.kind === "BUSINESS" ? `as ${me.displayName}` : "yourself"} — your {me.kind === "BUSINESS" ? "followers" : "friends and followers"} get a notification.
+            Go live as {me.displayName} — your connections and followers get a notification.
           </Empty>
         )}
       </div>
@@ -129,14 +145,58 @@ function useMediaQuery(query: string) {
 // Saved like any comment (so they stay on the post in the feed afterwards) and pushed to
 // everyone watching over the socket ("live:comment" / "live:comment-removed").
 
+type ReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD";
+const LIVE_REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
+  { type: "LIKE", emoji: "👍", label: "Like" },
+  { type: "LOVE", emoji: "❤️", label: "Love" },
+  { type: "HAHA", emoji: "😂", label: "Haha" },
+  { type: "WOW", emoji: "😮", label: "Wow" },
+  { type: "SAD", emoji: "😢", label: "Sad" },
+];
+const emojiOf = (t: ReactionType) => LIVE_REACTIONS.find((r) => r.type === t)?.emoji ?? "❤️";
+
 interface LiveChat {
-  messages: { id: string; name: string; text: string; at: string; isLocal: boolean }[];
+  messages: { id: string; author: ProfileCard; text: string; at: string; isLocal: boolean }[];
   send: (text: string) => void;
+  react: (type: ReactionType) => void;
+  stream: LiveStream | null;
 }
-const LiveChatCtx = createContext<LiveChat>({ messages: [], send: () => {} });
+const LiveChatCtx = createContext<LiveChat>({ messages: [], send: () => {}, react: () => {}, stream: null });
+
+/** Emojis floating up the right side: your taps at once, others' from "live:reaction". */
+type Floater = { id: number; emoji: string; x: number; dur: number; size: number };
+const floatListeners = new Set<(emoji: string) => void>();
+const floatEmoji = (emoji: string) => floatListeners.forEach((l) => l(emoji));
+let floatSeq = 0;
+
+function FloatingReactions() {
+  const [items, setItems] = useState<Floater[]>([]);
+  useEffect(() => {
+    const add = (emoji: string) => {
+      const f: Floater = { id: ++floatSeq, emoji, x: Math.random() * 56 - 28, dur: 2600 + Math.random() * 1400, size: 26 + Math.random() * 14 };
+      setItems((list) => [...list.slice(-30), f]);
+      setTimeout(() => setItems((list) => list.filter((x) => x.id !== f.id)), f.dur);
+    };
+    floatListeners.add(add);
+    return () => void floatListeners.delete(add);
+  }, []);
+  return (
+    <div className="pointer-events-none absolute bottom-28 right-4 z-10 h-[55%] w-24" aria-hidden>
+      {items.map((f) => (
+        <span
+          key={f.id}
+          className="mu-float absolute bottom-0 left-1/2"
+          style={{ fontSize: f.size, ["--x" as string]: `${f.x}px`, animationDuration: `${f.dur}ms` }}
+        >
+          {f.emoji}
+        </span>
+      ))}
+    </div>
+  );
+}
 const useLiveChat = () => useContext(LiveChatCtx);
 
-function useLiveCommentsState(postId: string | null, meId: string): LiveChat {
+function useLiveCommentsState(postId: string | null, meId: string, stream: LiveStream | null): LiveChat {
   const socket = useSocket();
   const key = ["live-comments", postId];
   const history = useQuery({ queryKey: key, queryFn: () => mu.posts.comments(postId!), enabled: !!postId, staleTime: Infinity });
@@ -147,19 +207,24 @@ function useLiveCommentsState(postId: string | null, meId: string): LiveChat {
     if (!socket || !postId) return;
     const added = (c: Comment) => c.postId === postId && upsert(c);
     const removed = (r: { commentId: string }) => queryClient.setQueryData<Comment[]>(key, (list = []) => list.filter((x) => x.commentId !== r.commentId));
+    // Others' reactions float in; your own already floated when you tapped.
+    const reacted = (r: { liveStreamId: string; type: ReactionType; profileId: string }) =>
+      r.liveStreamId === stream?.liveStreamId && r.profileId !== meId && floatEmoji(emojiOf(r.type));
     socket.on("live:comment", added);
     socket.on("live:comment-removed", removed);
+    socket.on("live:reaction", reacted);
     return () => {
       socket.off("live:comment", added);
       socket.off("live:comment-removed", removed);
+      socket.off("live:reaction", reacted);
     };
-  }, [socket, postId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [socket, postId, stream?.liveStreamId, meId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const messages = useMemo(
     () =>
       [...(history.data ?? [])].reverse().map((c) => ({
         id: c.commentId,
-        name: c.author.displayName,
+        author: c.author,
         text: c.text,
         at: c.createdAt,
         isLocal: c.author.profileId === meId,
@@ -170,15 +235,79 @@ function useLiveCommentsState(postId: string | null, meId: string): LiveChat {
     if (!postId) return;
     mu.posts.comment(postId, text).then(upsert, toastError);
   };
-  return { messages, send };
+  const react = (type: ReactionType) => {
+    if (!stream) return;
+    floatEmoji(emojiOf(type));
+    void mu.live.react(stream.liveStreamId, type).catch(() => {});
+  };
+  return { messages, send, react, stream };
 }
 
-function ChatLine({ name, text, isLocal }: { name: string; text: string; isLocal: boolean }) {
+/** A comment floating over the video (phones): avatar + name + text in a soft pill. */
+function OverlayLine({ author, text, isLocal }: { author: ProfileCard; text: string; isLocal: boolean }) {
   return (
-    <p className="text-sm leading-snug">
-      <span className={cx("mr-1.5 font-semibold", isLocal ? "text-brand" : "text-accent")}>{isLocal ? "You" : name}</span>
-      <span className="break-words text-white/90">{text}</span>
-    </p>
+    <div className="flex max-w-[85%] items-start gap-2 rounded-2xl bg-black/35 py-1.5 pl-1.5 pr-3">
+      <Avatar profile={author} size={24} />
+      <p className="min-w-0 text-[13px] leading-snug">
+        <span className={cx("mr-1.5 font-semibold", isLocal ? "text-brand" : "text-white")}>{isLocal ? "You" : author.displayName}</span>
+        <span className="break-words text-white/90">{text}</span>
+      </p>
+    </div>
+  );
+}
+
+/** A comment in the chat panel: avatar, name, time, and the message in a bubble. */
+function ChatRow({ author, text, at, isLocal }: { author: ProfileCard; text: string; at: string; isLocal: boolean }) {
+  return (
+    <div className="mu-chat-in flex items-start gap-2.5">
+      <Avatar profile={author} size={32} />
+      <div className="min-w-0 flex-1">
+        <p className="flex items-baseline gap-2 text-xs">
+          <span className={cx("truncate font-semibold", isLocal ? "text-brand" : "text-white")}>{isLocal ? "You" : author.displayName}</span>
+          <span className="shrink-0 text-white/40">{shortTime(at)}</span>
+        </p>
+        <p className={cx("mt-0.5 inline-block max-w-full break-words rounded-2xl rounded-tl-md px-3 py-1.5 text-sm", isLocal ? "bg-brand/25 text-white" : "bg-white/10 text-white/90")}>{text}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Tap the heart for the tray; every tap on an emoji floats it up for everyone. */
+function ReactionTray({ inline = false }: { inline?: boolean }) {
+  const { react, stream } = useLiveChat();
+  const [open, setOpen] = useState(inline);
+  const idle = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const touch = () => {
+    if (inline) return;
+    clearTimeout(idle.current);
+    idle.current = setTimeout(() => setOpen(false), 4000);
+  };
+  useEffect(() => () => clearTimeout(idle.current), []);
+  if (!stream || stream.status !== "LIVE") return null;
+  const tray = (
+    <div className={cx("flex items-center gap-1 rounded-full bg-black/45 p-1 backdrop-saturate-150", !inline && "mu-chat-in absolute bottom-12 right-0 z-20 shadow-xl")} role="group" aria-label="React">
+      {LIVE_REACTIONS.map((r) => (
+        <button
+          key={r.type}
+          type="button"
+          aria-label={r.label}
+          title={r.label}
+          onClick={() => (react(r.type), touch())}
+          className="flex size-10 items-center justify-center rounded-full text-2xl transition hover:scale-125 active:scale-90"
+        >
+          {r.emoji}
+        </button>
+      ))}
+    </div>
+  );
+  if (inline) return tray;
+  return (
+    <div className="relative">
+      {open && tray}
+      <IconButton label="React" onClick={() => (setOpen((o) => !o), touch())} className={cx("text-white", open ? "bg-danger/80" : "bg-white/15 hover:bg-white/25")}>
+        <Heart className={cx("size-5", open && "fill-current")} />
+      </IconButton>
+    </div>
   );
 }
 
@@ -212,7 +341,7 @@ function ChatForm({ onSend, autoFocus }: { onSend: (text: string) => void; autoF
 }
 
 /** Full chat history (side panel on wide screens, right-hand drawer on phones). */
-function ChatHistory() {
+function ChatHistory({ reactions = false }: { reactions?: boolean }) {
   const { messages, send } = useLiveChat();
   const listRef = useRef<HTMLDivElement>(null);
   // Braces matter: newer Chrome returns a Promise from scrollTo(), and an effect that returns
@@ -222,18 +351,57 @@ function ChatHistory() {
   }, [messages.length]);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={listRef} className="scrollbar-thin min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
-        {messages.length ? messages.map((m) => <ChatLine key={m.id} name={m.name} text={m.text} isLocal={m.isLocal} />) : <p className="pt-8 text-center text-sm text-white/50">No messages yet — say hi 👋</p>}
+      <div ref={listRef} className="scrollbar-thin min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        {messages.length ? (
+          messages.map((m) => <ChatRow key={m.id} author={m.author} text={m.text} at={m.at} isLocal={m.isLocal} />)
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-white/60">
+            <span className="flex size-14 items-center justify-center rounded-2xl bg-white/10 text-2xl">💬</span>
+            <p className="font-semibold text-white">No comments yet</p>
+            <p className="text-sm">Say hi — everyone watching sees it, and it stays on the post.</p>
+          </div>
+        )}
       </div>
-      <div className="safe-bottom flex p-3">
-        <ChatForm onSend={(t) => void send(t)} />
+      <div className="safe-bottom space-y-2 border-t border-white/10 p-3">
+        {reactions && (
+          <div className="flex justify-center">
+            <ReactionTray inline />
+          </div>
+        )}
+        <div className="flex">
+          <ChatForm onSend={(t) => void send(t)} />
+        </div>
       </div>
     </div>
   );
 }
 
+function ChatHeader({ onClose }: { onClose?: () => void }) {
+  const { stream, messages } = useLiveChat();
+  return (
+    <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-2 font-semibold">
+          Live chat <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/70">{messages.length}</span>
+        </p>
+        {stream && (
+          <p className="flex items-center gap-1.5 truncate text-xs text-white/60">
+            {stream.status === "LIVE" && <span className="size-1.5 animate-pulse rounded-full bg-danger" />}
+            {compact(stream.viewerCount)} watching · {stream.title}
+          </p>
+        )}
+      </div>
+      {onClose && (
+        <IconButton label="Close chat" onClick={onClose} className="text-white hover:bg-white/10">
+          <X className="size-5" />
+        </IconButton>
+      )}
+    </div>
+  );
+}
+
 /**
- * Phone overlay: the latest few messages float at the bottom of the video, new ones slide in
+ * Phone overlay: the latest few comments float at the bottom of the video, new ones slide in
  * and older ones fade away. Tapping them (or the chat button) opens the full chat on the right.
  */
 function ChatOverlay() {
@@ -256,15 +424,15 @@ function ChatOverlay() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open live chat"
-        className="block w-full space-y-1.5 px-4 pb-2 text-left [mask-image:linear-gradient(to_bottom,transparent,black_28px)] [text-shadow:0_1px_2px_rgb(0_0_0/0.8)]"
+        className="flex w-full flex-col items-start gap-1.5 px-3 pb-2 text-left [mask-image:linear-gradient(to_bottom,transparent,black_28px)]"
       >
         {recent.map((m, i) => {
           const age = (now - new Date(m.at).getTime()) / 1000;
           // Newest is fully visible; older lines and anything older than ~8 s fade back.
           const opacity = age > 12 ? 0.25 : age > 8 ? 0.5 : 1 - (recent.length - 1 - i) * 0.18;
           return (
-            <div key={m.id} className="mu-chat-in transition-opacity duration-700" style={{ opacity }}>
-              <ChatLine name={m.name} text={m.text} isLocal={m.isLocal} />
+            <div key={m.id} className="mu-chat-in w-full transition-opacity duration-700" style={{ opacity }}>
+              <OverlayLine author={m.author} text={m.text} isLocal={m.isLocal} />
             </div>
           );
         })}
@@ -275,6 +443,7 @@ function ChatOverlay() {
           {messages.length > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-brand px-1 text-[10px] font-bold leading-4">{messages.length > 99 ? "99+" : messages.length}</span>}
         </IconButton>
         <ChatForm onSend={(t) => void send(t)} />
+        <ReactionTray />
       </div>
       {open && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => close()}>
@@ -282,15 +451,10 @@ function ChatOverlay() {
             role="dialog"
             aria-label="Live chat"
             onClick={(e) => e.stopPropagation()}
-            className="mu-drawer-in flex h-full w-[85%] max-w-sm flex-col bg-navy text-white shadow-2xl"
+            className="mu-drawer-in flex h-full w-[88%] max-w-sm flex-col rounded-l-3xl bg-navy text-white shadow-2xl"
           >
-            <div className="flex items-center justify-between px-4 pt-3">
-              <p className="font-semibold">Live chat</p>
-              <IconButton label="Close chat" onClick={() => close()} className="text-white hover:bg-white/10">
-                <X className="size-5" />
-              </IconButton>
-            </div>
-            <ChatHistory />
+            <ChatHeader onClose={close} />
+            <ChatHistory reactions />
           </aside>
         </div>
       )}
@@ -390,7 +554,7 @@ export function LiveRoom() {
   const stream = useQuery({ queryKey: ["live", id], queryFn: () => mu.live.get(id), initialData: join.data?.stream, refetchInterval: 30_000 }).data;
   const isHost = stream?.hostProfileId === me.profileId;
   const wide = useMediaQuery("(min-width: 1024px)");
-  const chat = useLiveCommentsState(stream?.postId ?? join.data?.stream.postId ?? null, me.profileId);
+  const chat = useLiveCommentsState(stream?.postId ?? join.data?.stream.postId ?? null, me.profileId, stream ?? join.data?.stream ?? null);
   const publish = useMemo(() => (isHost ? { camera: true, mic: true } : { camera: false, mic: false }), [isHost]);
 
   useEffect(() => {
@@ -451,6 +615,7 @@ export function LiveRoom() {
             so a phone keyboard opening for the chat never squeezes the video away. */}
         <div className="relative min-h-0 min-w-0 flex-1">
           <Screen stream={stream} />
+          {!ended && <FloatingReactions />}
           <header className="absolute inset-x-0 top-0 z-10 flex items-center gap-3 bg-gradient-to-b from-black/60 to-transparent p-3">
             <IconButton label="Back" onClick={() => navigate("/live")} className="text-white hover:bg-white/10">
               <ArrowLeft className="size-6" />
@@ -485,9 +650,9 @@ export function LiveRoom() {
           </div>
         </div>
         {!ended && wide && (
-          <aside className="flex w-80 shrink-0 flex-col border-l border-white/10 bg-navy">
-            <p className="px-4 pt-4 text-sm font-semibold">Live chat</p>
-            <ChatHistory />
+          <aside className="flex w-80 shrink-0 flex-col border-l border-white/10 bg-navy text-white">
+            <ChatHeader />
+            <ChatHistory reactions />
           </aside>
         )}
       </MumuRoom>

@@ -1,6 +1,21 @@
 import { api } from "@/lib/api";
+
+export interface AdminSettings {
+  consumerModeEnabled: boolean;
+  liveEnabled: boolean;
+  maxProvidersPerAccount: number;
+}
+export interface AdminReport {
+  reportId: string;
+  targetType: "PROFILE" | "POST" | "COMMENT" | "MESSAGE" | "LIVE";
+  targetId: string;
+  reason: string;
+  status: "OPEN" | "ACTIONED" | "DISMISSED";
+  createdAt: string;
+  reporter: ProfileCard;
+}
 import type {
-  Account, Audience, Device, CallInfo, Comment, Conversation, LiveStream, Media, Message, MyProfile,
+  Account, Audience, Category, Device, CallInfo, Comment, Conversation, LiveStream, Media, Message, MyProfile,
   Notification, Post, Profile, ProfileCard, ProfileView, ReactionType, RtcJoin,
 } from "./types";
 
@@ -8,15 +23,16 @@ const before = (cursor?: string) => (cursor ? { before: cursor } : {});
 
 export const mu = {
   me: () => api<Account>("/api/me"),
+  categories: () => api<Category[]>("/api/categories", { auth: false }),
   devices: () => api<{ max: number; devices: Device[] }>("/api/me/devices"),
   signOutDevice: (id: string) => api<void>(`/api/me/devices/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   profiles: {
     get: (idOrHandle: string) => api<ProfileView>(`/api/profiles/${encodeURIComponent(idOrHandle)}`),
     search: (q: string, kind?: "PERSONAL" | "BUSINESS") => api<ProfileCard[]>("/api/profiles/search", { query: { q, kind, limit: 20 } }),
-    createBusiness: (body: { handle: string; displayName: string; category?: string; bio?: string; website?: string }) =>
+    createBusiness: (body: { handle: string; displayName: string; categoryId?: string; bio?: string; website?: string }) =>
       api<MyProfile>("/api/profiles", { method: "POST", body }),
-    update: (profileId: string, body: Partial<{ handle: string; displayName: string; bio: string | null; category: string | null; website: string | null; avatarMediaId: string | null; coverMediaId: string | null }>) =>
+    update: (profileId: string, body: Partial<{ handle: string; displayName: string; bio: string | null; categoryId: string | null; website: string | null; avatarMediaId: string | null; coverMediaId: string | null }>) =>
       api<Profile>(`/api/profiles/${profileId}`, { method: "PATCH", body }),
     remove: (profileId: string) => api<void>(`/api/profiles/${profileId}`, { method: "DELETE" }),
     members: (profileId: string) => api<{ userId: string; role: string; profile: ProfileCard | null }[]>(`/api/profiles/${profileId}/members`),
@@ -86,15 +102,33 @@ export const mu = {
   live: {
     list: () => api<LiveStream[]>("/api/live"),
     get: (id: string) => api<LiveStream>(`/api/live/${id}`),
-    start: (title: string, audience: Audience) => api<{ stream: LiveStream; rtc: RtcJoin }>("/api/live", { method: "POST", body: { title, audience } }),
+    start: (title: string, audience: Audience, replace = false) => api<{ stream: LiveStream; rtc: RtcJoin }>("/api/live", { method: "POST", body: { title, audience, replace } }),
     watch: (id: string, takeover = false) => api<{ stream: LiveStream; rtc: RtcJoin }>(`/api/live/${id}/watch`, { method: "POST", body: { takeover } }),
     leave: (id: string) => api<LiveStream>(`/api/live/${id}/leave`, { method: "POST" }),
+    react: (id: string, type: "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD") => api<{ floated: boolean }>(`/api/live/${id}/react`, { method: "POST", body: { type } }),
     end: (id: string) => api<LiveStream>(`/api/live/${id}/end`, { method: "POST" }),
   },
 
   notifications: {
     list: (cursor?: string) => api<{ items: Notification[]; unread: number }>("/api/notifications", { query: before(cursor) }),
     readAll: () => api("/api/notifications/read", { method: "POST", body: {} }),
+  },
+
+  admin: {
+    overview: () => api<Record<string, number>>("/api/admin/overview"),
+    categories: () => api<Category[]>("/api/admin/categories"),
+    addCategory: (name: string) => api<Category>("/api/admin/categories", { method: "POST", body: { name } }),
+    updateCategory: (id: string, body: Partial<{ name: string; sortOrder: number; isActive: boolean }>) => api<Category>(`/api/admin/categories/${id}`, { method: "PATCH", body }),
+    deleteCategory: (id: string) => api<void>(`/api/admin/categories/${id}`, { method: "DELETE" }),
+    settings: () => api<AdminSettings>("/api/admin/settings"),
+    saveSettings: (body: Partial<AdminSettings>) => api<AdminSettings>("/api/admin/settings", { method: "PUT", body }),
+    profiles: (q: { q?: string; kind?: string; status?: string; offset?: number }) =>
+      api<{ items: (Profile & { suspendedAt: string | null; _count: { members: number; posts: number; followers: number } })[]; total: number }>("/api/admin/profiles", { query: { ...q, limit: 30 } }),
+    moderateProfile: (id: string, body: { isVerified?: boolean; suspended?: boolean }) => api<Profile>(`/api/admin/profiles/${id}`, { method: "PATCH", body }),
+    reports: (status: string) => api<{ items: AdminReport[]; total: number }>("/api/reports", { query: { status, limit: 50 } }),
+    resolveReport: (id: string, status: "ACTIONED" | "DISMISSED") => api(`/api/reports/${id}`, { method: "PATCH", body: { status } }),
+    lives: () => api<LiveStream[]>("/api/admin/live"),
+    endLive: (id: string) => api(`/api/admin/live/${id}/end`, { method: "POST" }),
   },
 
   report: (targetType: "PROFILE" | "POST" | "COMMENT" | "MESSAGE" | "LIVE", targetId: string, reason: string) =>
