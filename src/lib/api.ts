@@ -27,7 +27,7 @@ export interface RequestOptions {
 interface TokenHooks {
   getAccessToken: () => string | null;
   refresh: () => Promise<string | null>;
-  /** Profile to act as (x-profile-id) on MuMu API calls. */
+  /** Profile to act as (x-profile-id) on Mu API calls. */
   getProfileId: () => string | null;
   /** This device was signed out (from another device) — end the session here. */
   onDeviceSignedOut?: () => void;
@@ -92,7 +92,7 @@ async function request<T>(base: string, path: string, opts: RequestOptions, with
   }
 }
 
-/** MuMu API, as the active profile. */
+/** Mu API, as the active profile. */
 export const api = <T>(path: string, opts: RequestOptions = {}) => request<T>(config.apiUrl, path, opts, true);
 /** crypt-iam */
 export const iam = <T>(path: string, opts: RequestOptions = {}) => request<T>(config.iamUrl, path, opts, false);

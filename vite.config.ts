@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "MuMu",
-        short_name: "MuMu",
+        name: "Mu",
+        short_name: "Mu",
         description: "Chats, posts, calls and live — with people and businesses.",
         theme_color: "#00a8ff",
         background_color: "#f5f6fa",

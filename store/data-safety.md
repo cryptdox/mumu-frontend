@@ -1,8 +1,8 @@
-# Google Play — Data safety form answers (MuMu 1.0.0)
+# Google Play — Data safety form answers (Mu 1.0.0)
 
 **Does your app collect or share any of the required user data types?** Yes (collects; does **not** share with third parties).
 **Is all user data encrypted in transit?** Yes (HTTPS/TLS everywhere).
-**Do you provide a way for users to request that their data is deleted?** Yes — in app (Settings → Delete my MuMu account) and https://mu.cryptdox.com/account-deletion.
+**Do you provide a way for users to request that their data is deleted?** Yes — in app (Settings → Delete my Mu account) and https://mu.cryptdox.com/account-deletion.
 
 | Data type (Play category) | Collected | Shared | Optional? | Purposes |
 | --- | --- | --- | --- | --- |
@@ -23,4 +23,4 @@ Ephemeral processing: camera/microphone media during calls and lives (not stored
 **Content rating questionnaire**: Social/communication app; users can interact and exchange content (Yes); user-generated content is moderated with in-app reporting and blocking (Yes); shares location (No); purchases (No).
 **Target audience**: 13+ (not designed for children).
 **Ads**: No ads.
-**App access for review**: provide a test account (email + password) in Play Console → App content → App access, because MuMu requires sign-in.
+**App access for review**: provide a test account (email + password) in Play Console → App content → App access, because Mu requires sign-in.

@@ -49,7 +49,7 @@ export function DevicesCard() {
       ) : (
         <ul className="mt-2 divide-y divide-line">
           {devices.data?.devices.map((d) => (
-            <DeviceRow key={d.deviceId} d={d} onSignOut={d.current ? undefined : confirmThen({ title: `Sign out ${d.label}?`, message: "That device will be signed out of MuMu right away.", confirmLabel: "Sign out", danger: true }, () => signOut.mutate(d.deviceId))} busy={signOut.isPending && signOut.variables === d.deviceId} />
+            <DeviceRow key={d.deviceId} d={d} onSignOut={d.current ? undefined : confirmThen({ title: `Sign out ${d.label}?`, message: "That device will be signed out of Mu right away.", confirmLabel: "Sign out", danger: true }, () => signOut.mutate(d.deviceId))} busy={signOut.isPending && signOut.variables === d.deviceId} />
           ))}
         </ul>
       )}
@@ -64,7 +64,7 @@ export function DeviceLimit({ onFreed }: { onFreed: () => void }) {
   const signOut = useMutation({
     mutationFn: (id: string) => mu.signOutDevice(id),
     onSuccess: () => {
-      toast("Signed out — you can use MuMu here now");
+      toast("Signed out — you can use Mu here now");
       onFreed();
     },
     onError: toastError,
@@ -75,13 +75,13 @@ export function DeviceLimit({ onFreed }: { onFreed: () => void }) {
       <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-sm">
         <img src="/favicon.svg" alt="" className="mb-4 size-12 rounded-2xl" />
         <h1 className="text-xl font-bold">You're signed in on {devices.data?.max ?? 3} devices</h1>
-        <p className="mt-1 text-sm text-muted">Sign out of one of them to use MuMu on this device.</p>
+        <p className="mt-1 text-sm text-muted">Sign out of one of them to use Mu on this device.</p>
         {devices.isLoading ? (
           <Loading />
         ) : (
           <ul className="mt-3 divide-y divide-line">
             {others.map((d) => (
-              <DeviceRow key={d.deviceId} d={d} onSignOut={confirmThen({ title: `Sign out ${d.label}?`, message: "That device will be signed out so you can use MuMu here.", confirmLabel: "Sign out", danger: true }, () => signOut.mutate(d.deviceId))} busy={signOut.isPending && signOut.variables === d.deviceId} />
+              <DeviceRow key={d.deviceId} d={d} onSignOut={confirmThen({ title: `Sign out ${d.label}?`, message: "That device will be signed out so you can use Mu here.", confirmLabel: "Sign out", danger: true }, () => signOut.mutate(d.deviceId))} busy={signOut.isPending && signOut.variables === d.deviceId} />
             ))}
           </ul>
         )}

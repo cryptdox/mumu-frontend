@@ -135,7 +135,7 @@ function Members() {
   );
 }
 
-/** Your hidden Consumer (personal) profile: switch to it to use MuMu as a customer. */
+/** Your hidden Consumer (personal) profile: switch to it to use Mu as a customer. */
 function ConsumerMode() {
   const me = useProfile();
   const { profiles, switchProfile, account } = useAuth();
@@ -148,8 +148,8 @@ function ConsumerMode() {
     <Card title="Consumer mode">
       <p className="mb-3 text-sm text-muted">
         {asConsumer
-          ? "You're using MuMu as a consumer — your personal profile. Switch back to act as your provider."
-          : "Use MuMu as a customer with your personal profile, separate from your provider profiles."}
+          ? "You're using Mu as a consumer — your personal profile. Switch back to act as your provider."
+          : "Use Mu as a customer with your personal profile, separate from your provider profiles."}
       </p>
       <Button
         variant={asConsumer ? "primary" : "secondary"}
@@ -186,7 +186,7 @@ export default function SettingsPage() {
   const deleteAccount = useMutation({
     mutationFn: mu.deleteAccount,
     onSuccess: async () => {
-      toast("Your MuMu account was deleted");
+      toast("Your Mu account was deleted");
       await logout();
       navigate("/login");
     },
@@ -247,7 +247,7 @@ export default function SettingsPage() {
               loading={deleteAccount.isPending}
               onClick={confirmThen(
                 {
-                  title: "Delete your MuMu account?",
+                  title: "Delete your Mu account?",
                   message: "All your profiles, posts, comments, messages, photos and lives are deleted for good. This can't be undone.",
                   confirmLabel: "Delete everything",
                   danger: true,
@@ -255,7 +255,7 @@ export default function SettingsPage() {
                 () => deleteAccount.mutate(),
               )}
             >
-              <Trash2 className="size-4" /> Delete my MuMu account
+              <Trash2 className="size-4" /> Delete my Mu account
             </Button>
             {me.kind === "BUSINESS" && me.role === "OWNER" && (
               <Button variant="danger" loading={remove.isPending} onClick={confirmThen({ title: `Delete ${me.displayName}?`, message: "Its posts stay hidden and its people lose access. This can't be undone.", confirmLabel: "Delete", danger: true }, () => remove.mutate())}>

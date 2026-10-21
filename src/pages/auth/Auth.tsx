@@ -13,7 +13,7 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: st
       <div className="relative hidden flex-1 overflow-hidden bg-gradient-to-br from-brand via-[#487eb0] to-accent p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3">
           <img src="/favicon.svg" alt="" className="size-11 rounded-2xl ring-2 ring-white/40" />
-          <span className="text-2xl font-bold">MuMu</span>
+          <span className="text-2xl font-bold">Mu</span>
         </div>
         <div>
           <h2 className="max-w-md text-4xl font-bold leading-tight">Chat, share and go live — the network for providers and the people they serve.</h2>
@@ -73,7 +73,7 @@ export function Login() {
   }
 
   return (
-    <AuthFrame title="Welcome back" subtitle="Sign in to your MuMu account">
+    <AuthFrame title="Welcome back" subtitle="Sign in to your Mu account">
       <form onSubmit={submit} className="space-y-4">
         <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Input label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />

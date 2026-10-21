@@ -12,7 +12,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[MuMu] screen crashed:", error, info.componentStack);
+    console.error("[Mu] screen crashed:", error, info.componentStack);
     this.setState({ where: (info.componentStack ?? "").trim().split("\n").slice(0, 4).join("\n") });
   }
 

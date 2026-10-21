@@ -7,7 +7,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const config: CapacitorConfig = {
   appId: "mu.cryptdox.com",
-  appName: "MuMu",
+  appName: "Mu",
   webDir: "dist",
   server: {
     url: process.env.CAP_SERVER_URL ?? "https://mu.cryptdox.com",

@@ -62,7 +62,7 @@ export function ProviderSetup() {
       <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-sm">
         <img src="/favicon.svg" alt="" className="mb-4 size-12 rounded-2xl" />
         <h1 className="text-2xl font-bold tracking-tight">Set up your provider profile</h1>
-        <p className="mt-1 text-muted">This is how you appear on MuMu — you can change it any time.</p>
+        <p className="mt-1 text-muted">This is how you appear on Mu — you can change it any time.</p>
         <div className="my-5 rounded-2xl bg-gradient-to-br from-brand/10 to-accent/15 p-4">{perks}</div>
         <ProviderForm submitLabel="Create my profile" onCreated={switchProfile} />
         <button onClick={() => void logout()} className="mx-auto mt-4 flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">

@@ -1,4 +1,4 @@
-/** This browser's id for MuMu's 3-device limit (kept in local storage, shared by its tabs). */
+/** This browser's id for Mu's 3-device limit (kept in local storage, shared by its tabs). */
 const KEY = "mu.device";
 let cached: string | null = null;
 

@@ -39,7 +39,7 @@ await render(
     <div style="position:absolute;right:140px;bottom:-180px;width:340px;height:340px;border-radius:50%;background:rgba(255,255,255,.10)"></div>
     <div style="width:180px;height:180px;flex:none;border-radius:44px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;box-shadow:0 20px 50px rgba(0,0,0,.18)"><div style="width:62%;height:62%">${M}</div></div>
     <div style="position:relative">
-      <div style="font-size:84px;font-weight:800;letter-spacing:-2px;line-height:1">MuMu</div>
+      <div style="font-size:84px;font-weight:800;letter-spacing:-2px;line-height:1">Mu</div>
       <div style="margin-top:18px;font-size:34px;font-weight:700;line-height:1.25;max-width:600px">Chat, call &amp; go live —<br>the network for providers</div>
     </div>
   </div>`,

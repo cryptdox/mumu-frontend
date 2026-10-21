@@ -1,6 +1,6 @@
-# MuMu — Google Play listing (v1.0.0)
+# Mu — Google Play listing (v1.0.0)
 
-**App name** (≤ 30): MuMu: Chat, Call & Go Live
+**App name** (≤ 30): Mu: Chat, Call & Go Live
 **Package**: mu.cryptdox.com
 **Category**: Communication  ·  **Tags**: Messaging, Business, Social
 **Contact email**: cryptdox.ethos@gmail.com  ·  **Website**: https://mu.cryptdox.com
@@ -11,7 +11,7 @@
 Chat, call and go live with customers — the network for providers.
 
 ## Full description (≤ 4000)
-MuMu is the messaging and social app built for providers — shops, restaurants, studios, clinics, creators — and the people they serve.
+Mu is the messaging and social app built for providers — shops, restaurants, studios, clinics, creators — and the people they serve.
 
 💬 CHATS FIRST
 • A dedicated inbox for your business: answer customers, send photos, reply to messages
@@ -40,10 +40,10 @@ MuMu is the messaging and social app built for providers — shops, restaurants,
 • Sign in on up to 3 devices; see and sign out devices any time
 • Delete your account and data from Settings
 
-MuMu works on phones and on the web at mu.cryptdox.com.
+Mu works on phones and on the web at mu.cryptdox.com.
 
 ## What's new (release notes)
-First release of MuMu: chats, voice and video calls, posts, live streaming with comments and reactions, provider profiles and connections.
+First release of Mu: chats, voice and video calls, posts, live streaming with comments and reactions, provider profiles and connections.
 
 ## Graphics (in this folder)
 | Asset | File | Spec |

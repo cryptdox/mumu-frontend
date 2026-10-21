@@ -11,7 +11,7 @@ function Page({ title, children }: { title: string; children: ReactNode }) {
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-5 py-4">
           <Link to="/" className="flex items-center gap-2.5">
             <img src="/favicon.svg" alt="" className="size-9 rounded-xl" />
-            <span className="text-lg font-bold">MuMu</span>
+            <span className="text-lg font-bold">Mu</span>
           </Link>
         </div>
       </header>
@@ -51,13 +51,13 @@ export function PrivacyPolicy() {
   return (
     <Page title="Privacy Policy">
       <p>
-        <b>App:</b> MuMu (Android package <code>mu.cryptdox.com</code>) and the website {APP_URL}
+        <b>App:</b> Mu (Android package <code>mu.cryptdox.com</code>) and the website {APP_URL}
         <br />
         <b>Developer:</b> Cryptdox, Dhaka, Bangladesh · <b>Contact:</b> <Mail />
       </p>
       <p>
-        This Privacy Policy explains how Cryptdox (“we”, “us”, “our”) collects, uses, stores, shares and protects information when you use MuMu
-        (the “App” or “Service”). By using MuMu you agree to this policy. If you do not agree, please do not use the App.
+        This Privacy Policy explains how Cryptdox (“we”, “us”, “our”) collects, uses, stores, shares and protects information when you use Mu
+        (the “App” or “Service”). By using Mu you agree to this policy. If you do not agree, please do not use the App.
       </p>
 
       <h2>1. Information we collect</h2>
@@ -93,7 +93,7 @@ export function PrivacyPolicy() {
           ["Microphone:", "for voice and video calls and live streaming. Asked only when you start or join a call or go live."],
           ["Modify audio settings:", "to switch call audio between the earpiece, speaker and headset during a call."],
           ["Wake lock:", "to turn the screen off when the phone is at your ear during a call, and to keep it on during calls."],
-          ["Internet:", "to connect to MuMu services."],
+          ["Internet:", "to connect to Mu services."],
         ]}
       />
       <p>
@@ -111,7 +111,7 @@ export function PrivacyPolicy() {
         <li>To provide messaging, posts, comments, reactions, voice and video calls, and live streaming.</li>
         <li>To show your content only to the audience you choose: Public, Connections, or Only me.</li>
         <li>To send in-app notifications, for example new messages, connection requests, comments and lives.</li>
-        <li>To keep MuMu safe: rate limiting, spam and abuse prevention, handling reports, and suspending profiles that break the rules.</li>
+        <li>To keep Mu safe: rate limiting, spam and abuse prevention, handling reports, and suspending profiles that break the rules.</li>
         <li>To fix bugs and improve the Service.</li>
         <li>To comply with legal obligations.</li>
       </ul>
@@ -130,8 +130,8 @@ export function PrivacyPolicy() {
       <Items
         items={[
           ["Supabase:", "database and photo storage."],
-          ["Render:", "hosting for the MuMu backend and sign-in services."],
-          ["Netlify:", "hosting for the MuMu web app."],
+          ["Render:", "hosting for the Mu backend and sign-in services."],
+          ["Netlify:", "hosting for the Mu web app."],
           ["Cloudflare Turnstile:", "bot protection on sign-up and sign-in."],
           ["Google Fonts:", "delivering the App's font."],
           ["MUMU RTC (operated by Cryptdox):", "real-time audio and video for calls and lives."],
@@ -150,7 +150,7 @@ export function PrivacyPolicy() {
       <ul>
         <li>Account, profile and content data are kept while your account exists.</li>
         <li>When you delete content, it is removed from the Service immediately.</li>
-        <li>When you delete your account, your MuMu data is deleted immediately (see section 7). Backups are replaced within <b>30 days</b>.</li>
+        <li>When you delete your account, your Mu data is deleted immediately (see section 7). Backups are replaced within <b>30 days</b>.</li>
         <li>Security logs are kept for a limited time, normally up to 90 days.</li>
       </ul>
 
@@ -169,7 +169,7 @@ export function PrivacyPolicy() {
         <li><b>Block and report:</b> block profiles and report content or profiles.</li>
         <li><b>Manage devices:</b> see and sign out your devices in Settings → Devices.</li>
         <li>
-          <b>Delete your account:</b> go to <b>Settings → Delete my MuMu account</b>, or follow the steps at <Url path="/account-deletion" />. This
+          <b>Delete your account:</b> go to <b>Settings → Delete my Mu account</b>, or follow the steps at <Url path="/account-deletion" />. This
           deletes every profile you own, with its posts, comments, reactions, messages, photos, lives and connections, plus your signed-in devices.
         </li>
         <li><b>Request by email:</b> email <Mail /> from your account's email address. We respond within 30 days.</li>
@@ -181,7 +181,7 @@ export function PrivacyPolicy() {
 
       <h2>8. Children's privacy</h2>
       <p>
-        MuMu is not intended for children under <b>13</b>. We do not knowingly collect personal data from children under 13. If you believe a child
+        Mu is not intended for children under <b>13</b>. We do not knowingly collect personal data from children under 13. If you believe a child
         has given us personal data, contact us and we will delete it.
       </p>
 
@@ -199,7 +199,7 @@ export function PrivacyPolicy() {
 
       <h2>11. Contact us</h2>
       <p>
-        Cryptdox — MuMu
+        Cryptdox — Mu
         <br />
         Email: <Mail />
         <br />
@@ -211,14 +211,14 @@ export function PrivacyPolicy() {
 
 export function AccountDeletion() {
   return (
-    <Page title="Delete your MuMu account">
-      <p>You can delete your MuMu account and its data yourself, at any time.</p>
+    <Page title="Delete your Mu account">
+      <p>You can delete your Mu account and its data yourself, at any time.</p>
 
       <h2>In the app or on the web</h2>
       <ul>
-        <li>Sign in to MuMu (the app or <a href="/login" className="font-semibold text-brand">the website</a>).</li>
+        <li>Sign in to Mu (the app or <a href="/login" className="font-semibold text-brand">the website</a>).</li>
         <li>Open <b>Settings</b> (your photo → Settings).</li>
-        <li>Under <b>Account</b>, tap <b>Delete my MuMu account</b> and confirm.</li>
+        <li>Under <b>Account</b>, tap <b>Delete my Mu account</b> and confirm.</li>
       </ul>
 
       <h2>What is deleted</h2>
@@ -231,13 +231,13 @@ export function AccountDeletion() {
 
       <h2>Your Cryptdox sign-in</h2>
       <p>
-        MuMu uses the Cryptdox sign-in, which can be shared with other Cryptdox apps, so deleting your MuMu account doesn't delete it. To delete the
+        Mu uses the Cryptdox sign-in, which can be shared with other Cryptdox apps, so deleting your Mu account doesn't delete it. To delete the
         sign-in too, email <Mail /> from the address you signed up with.
       </p>
 
       <h2>Can't sign in?</h2>
       <p>
-        Email <Mail /> from your account's email address and we'll delete your MuMu account and data within 30 days.
+        Email <Mail /> from your account's email address and we'll delete your Mu account and data within 30 days.
       </p>
     </Page>
   );

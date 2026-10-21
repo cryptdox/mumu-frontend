@@ -98,9 +98,9 @@ export function AppShell() {
     <div className="flex h-dvh overflow-hidden">
       {/* Desktop / tablet rail */}
       <aside className="hidden w-[76px] shrink-0 flex-col items-center gap-2 border-r border-line bg-surface py-4 md:flex xl:w-60 xl:items-stretch xl:px-3">
-        <Link to="/chats" className="mb-4 flex items-center gap-2.5 xl:px-2" aria-label="MuMu home">
+        <Link to="/chats" className="mb-4 flex items-center gap-2.5 xl:px-2" aria-label="Mu home">
           <img src="/favicon.svg" alt="" className="size-10" />
-          <span className="hidden text-xl font-bold tracking-tight xl:inline">MuMu</span>
+          <span className="hidden text-xl font-bold tracking-tight xl:inline">Mu</span>
         </Link>
         {nav.map(({ to, label, icon: Icon, badge }) => (
           <NavLink

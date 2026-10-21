@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Browser end-to-end: a real video call and a live stream through the web app,
- * the MuMu API and MUMU RTC (control plane + media node), with Chrome's fake
+ * the Mu API and MUMU RTC (control plane + media node), with Chrome's fake
  * camera/mic. Two people in separate browser profiles.
  *
  *   APP_URL=http://localhost:5174 SESSIONS=../mumu-backend/scripts/demo-sessions.json \

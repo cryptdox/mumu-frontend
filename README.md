@@ -1,4 +1,4 @@
-# MuMu web app (mumu-frontend)
+# Mu web app (mumu-frontend)
 
 Installable PWA for phones and desktops: **Chats** first, then **Feed**, **Live**, **Alerts**
 and the profile switcher (personal ⇄ business). Vite · React 19 · TypeScript · Tailwind 4 ·

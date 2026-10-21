@@ -1,11 +1,11 @@
-# Privacy Policy — MuMu
+# Privacy Policy — Mu
 
 **Effective date:** 21 October 2026
-**App:** MuMu (Android package `mu.cryptdox.com`) and the website https://mu.cryptdox.com
+**App:** Mu (Android package `mu.cryptdox.com`) and the website https://mu.cryptdox.com
 **Developer:** Cryptdox, Dhaka, Bangladesh
 **Contact:** cryptdox.ethos@gmail.com
 
-This Privacy Policy explains how Cryptdox ("we", "us", "our") collects, uses, stores, shares and protects information when you use MuMu (the "App" or "Service"). By using MuMu you agree to this policy. If you do not agree, please do not use the App.
+This Privacy Policy explains how Cryptdox ("we", "us", "our") collects, uses, stores, shares and protects information when you use Mu (the "App" or "Service"). By using Mu you agree to this policy. If you do not agree, please do not use the App.
 
 ## 1. Information we collect
 
@@ -30,7 +30,7 @@ We do not collect your precise or approximate location, contacts, SMS or call lo
 - **Microphone:** for voice and video calls and live streaming. Asked only when you start or join a call or go live.
 - **Modify audio settings:** to switch call audio between the earpiece, speaker and headset during a call.
 - **Wake lock:** to turn the screen off when the phone is at your ear during a call, and to keep it on during calls.
-- **Internet:** to connect to MuMu services.
+- **Internet:** to connect to Mu services.
 
 You can deny or revoke the camera and microphone permissions at any time in your phone's settings. The rest of the App keeps working, but calls and lives can't send your video or voice.
 
@@ -41,7 +41,7 @@ You can deny or revoke the camera and microphone permissions at any time in your
 - To provide messaging, posts, comments, reactions, voice and video calls, and live streaming.
 - To show your content only to the audience you choose: Public, Connections, or Only me.
 - To send in-app notifications, for example new messages, connection requests, comments and lives.
-- To keep MuMu safe: rate limiting, spam and abuse prevention, handling reports, and suspending profiles that break the rules.
+- To keep Mu safe: rate limiting, spam and abuse prevention, handling reports, and suspending profiles that break the rules.
 - To fix bugs and improve the Service.
 - To comply with legal obligations.
 
@@ -52,8 +52,8 @@ We share information only as described here:
 - **With other users, as you choose.** Your profile, posts and lives are visible according to the audience you select. Chats are visible to their members. Your name, handle and photo are visible to people you interact with.
 - **With service providers** who process data for us under their own security and privacy terms:
   - **Supabase:** database and photo storage.
-  - **Render:** hosting for the MuMu backend and sign-in services.
-  - **Netlify:** hosting for the MuMu web app.
+  - **Render:** hosting for the Mu backend and sign-in services.
+  - **Netlify:** hosting for the Mu web app.
   - **Cloudflare Turnstile:** bot protection on sign-up and sign-in.
   - **Google Fonts:** delivering the App's font.
   - **MUMU RTC** (operated by Cryptdox): real-time audio and video for calls and lives.
@@ -65,7 +65,7 @@ We share information only as described here:
 ## 5. Data retention
 - Account, profile and content data are kept while your account exists.
 - When you delete content, it is removed from the Service immediately.
-- When you delete your account, your MuMu data is deleted immediately (see section 7). Backups are replaced within **30 days**.
+- When you delete your account, your Mu data is deleted immediately (see section 7). Backups are replaced within **30 days**.
 - Security logs are kept for a limited time, normally up to 90 days.
 
 ## 6. Data security
@@ -80,13 +80,13 @@ No method of transmission or storage is 100% secure, but we work to protect your
 - **Control visibility:** choose Public, Connections or Only me for each post and live.
 - **Block and report:** block profiles and report content or profiles.
 - **Manage devices:** see and sign out your devices in Settings → Devices.
-- **Delete your account:** go to **Settings → Delete my MuMu account**, or follow the steps at https://mu.cryptdox.com/account-deletion. This deletes every profile you own, with its posts, comments, reactions, messages, photos, lives and connections, plus your signed-in devices.
+- **Delete your account:** go to **Settings → Delete my Mu account**, or follow the steps at https://mu.cryptdox.com/account-deletion. This deletes every profile you own, with its posts, comments, reactions, messages, photos, lives and connections, plus your signed-in devices.
 - **Request by email:** email cryptdox.ethos@gmail.com from your account's email address. We respond within 30 days.
 
 Depending on where you live (for example under the GDPR in the EU/UK or the CCPA in California), you may have extra rights, such as data portability or objecting to processing. Contact us to use them.
 
 ## 8. Children's privacy
-MuMu is not intended for children under **13**. We do not knowingly collect personal data from children under 13. If you believe a child has given us personal data, contact us and we will delete it.
+Mu is not intended for children under **13**. We do not knowingly collect personal data from children under 13. If you believe a child has given us personal data, contact us and we will delete it.
 
 ## 9. International data transfers
 Our service providers may store and process data in countries other than your own, for example in Japan, Singapore, the United States or the EU. We take steps so your data stays protected as described in this policy.
@@ -95,6 +95,6 @@ Our service providers may store and process data in countries other than your ow
 We may update this policy from time to time. We will post the new version at https://mu.cryptdox.com/privacy and update the effective date. For significant changes, we will also notify you in the App.
 
 ## 11. Contact us
-Cryptdox — MuMu
+Cryptdox — Mu
 Email: **cryptdox.ethos@gmail.com**
 Website: https://mu.cryptdox.com

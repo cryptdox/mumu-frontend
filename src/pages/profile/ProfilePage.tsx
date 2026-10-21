@@ -58,7 +58,7 @@ function Relationship({ p }: { p: ProfileView }) {
 async function shareProfile(p: { handle: string; displayName: string }) {
   const url = `${location.origin}/u/${p.handle}`;
   try {
-    if (navigator.share) await navigator.share({ title: p.displayName, text: `${p.displayName} on MuMu`, url });
+    if (navigator.share) await navigator.share({ title: p.displayName, text: `${p.displayName} on Mu`, url });
     else {
       await navigator.clipboard.writeText(url);
       toast("Profile link copied");

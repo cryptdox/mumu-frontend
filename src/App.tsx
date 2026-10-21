@@ -32,7 +32,7 @@ function RequireAccount() {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
         <img src="/favicon.svg" alt="" className="size-14" />
-        <p className="max-w-sm text-muted">{denied ? "Your account isn't set up for MuMu yet. Sign out and sign in again, or contact support." : errorMessage(me.error)}</p>
+        <p className="max-w-sm text-muted">{denied ? "Your account isn't set up for Mu yet. Sign out and sign in again, or contact support." : errorMessage(me.error)}</p>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => void me.refetch()}>Retry</Button>
           <Button onClick={() => void logout()}>Sign out</Button>
