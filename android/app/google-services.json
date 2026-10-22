@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "838388145002",
+    "project_id": "mu-mu-9d945",
+    "storage_bucket": "mu-mu-9d945.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838388145002:android:a9422803e577ceddb5a313",
+        "android_client_info": {
+          "package_name": "mu.cryptdox.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtJ1E1tN2SPe6IlUUm0ZTIjF9WeBDu3UQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

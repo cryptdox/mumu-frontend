@@ -6,6 +6,7 @@ import { mu } from "@/api/mu";
 import type { ProfileView } from "@/api/types";
 import { useAuth, useProfile } from "@/lib/auth";
 import { queryClient } from "@/lib/query";
+import { refreshConnections } from "@/lib/realtime";
 import { LoadMore, nextBefore } from "@/lib/infinite";
 import { compact } from "@/lib/format";
 import { Avatar, Button, Empty, ErrorNote, IconButton, Loading, Name, Sheet, confirmAction, cx, toast, toastError } from "@/components/ui";
@@ -15,8 +16,23 @@ import { PostCard } from "@/pages/feed/PostCard";
 
 function Relationship({ p }: { p: ProfileView }) {
   const navigate = useNavigate();
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["profile-view", p.handle] });
-  const act = useMutation({ mutationFn: (fn: () => Promise<unknown>) => fn(), onSuccess: refresh, onError: toastError });
+  const { handle = p.handle } = useParams();
+  type Rel = ProfileView["relationship"];
+  // The button flips at once (optimistic); the server's answer then refreshes it.
+  const act = useMutation({
+    mutationFn: ({ run }: { run: () => Promise<unknown>; next: Partial<Rel> }) => run(),
+    onMutate: ({ next }) => {
+      const before = queryClient.getQueryData<ProfileView>(["profile-view", handle]);
+      queryClient.setQueryData<ProfileView>(["profile-view", handle], (v) => v && { ...v, relationship: { ...v.relationship, ...next } });
+      return { before };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.before) queryClient.setQueryData(["profile-view", handle], ctx.before);
+      toastError(err);
+    },
+    onSettled: refreshConnections,
+  });
+  const busy = act.isPending;
   const message = useMutation({
     mutationFn: () => mu.chats.direct(p.profileId),
     onSuccess: (c) => navigate(`/chats/${c.conversationId}`),
@@ -31,23 +47,23 @@ function Relationship({ p }: { p: ProfileView }) {
       </Button>
       {canFriend &&
         (r.friendStatus === "FRIENDS" ? (
-          <Button variant="secondary" onClick={() => act.mutate(() => mu.connections.removeFriend(p.profileId))}>
+          <Button variant="secondary" disabled={busy} onClick={() => act.mutate({ run: () => mu.connections.removeFriend(p.profileId), next: { friendStatus: "NONE" } })}>
             <UserCheck className="size-4" /> Connected
           </Button>
         ) : r.friendStatus === "REQUEST_RECEIVED" ? (
-          <Button variant="accent" onClick={() => act.mutate(() => mu.connections.accept(p.profileId))}>
+          <Button variant="accent" disabled={busy} onClick={() => act.mutate({ run: () => mu.connections.accept(p.profileId), next: { friendStatus: "FRIENDS" } })}>
             <UserPlus className="size-4" /> Accept
           </Button>
         ) : r.friendStatus === "REQUEST_SENT" ? (
-          <Button variant="secondary" onClick={() => act.mutate(() => mu.connections.removeFriend(p.profileId))}>
+          <Button variant="secondary" disabled={busy} onClick={() => act.mutate({ run: () => mu.connections.removeFriend(p.profileId), next: { friendStatus: "NONE" } })}>
             Requested
           </Button>
         ) : (
-          <Button variant="secondary" onClick={() => act.mutate(() => mu.connections.addFriend(p.profileId))}>
+          <Button variant="secondary" disabled={busy} onClick={() => act.mutate({ run: () => mu.connections.addFriend(p.profileId), next: { friendStatus: "REQUEST_SENT" } })}>
             <UserPlus className="size-4" /> Connect
           </Button>
         ))}
-      <Button variant={r.following ? "secondary" : p.kind === "BUSINESS" ? "accent" : "secondary"} onClick={() => act.mutate(() => (r.following ? mu.connections.unfollow(p.profileId) : mu.connections.follow(p.profileId)))}>
+      <Button variant={r.following ? "secondary" : p.kind === "BUSINESS" ? "accent" : "secondary"} disabled={busy} onClick={() => act.mutate({ run: () => (r.following ? mu.connections.unfollow(p.profileId) : mu.connections.follow(p.profileId)), next: { following: !r.following } })}>
         {r.following ? <><UserMinus className="size-4" /> Following</> : "Follow"}
       </Button>
     </div>

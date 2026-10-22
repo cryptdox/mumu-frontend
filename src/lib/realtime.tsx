@@ -16,6 +16,11 @@ export const typingStore = createStore<Record<string, string[]>>({});
 /** A call ringing for you, and the call you're in. */
 export const callStore = createStore<{ incoming: CallInfo | null; active: { call: CallInfo; rtc: RtcJoin } | null }>({ incoming: null, active: null });
 export const unreadStore = createStore({ notifications: 0 });
+
+/** Anything showing a connection state: the requests list, profiles, connection lists. */
+export function refreshConnections() {
+  for (const key of ["friend-requests", "profile-view", "people"]) void queryClient.invalidateQueries({ queryKey: [key] });
+}
 /** Set when one of your lives moved to another of your devices. */
 export const liveTakeoverStore = createStore<{ liveStreamId: string } | null>(null);
 
@@ -94,9 +99,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     s.on("presence", (p: { profileId: string; online: boolean }) =>
       patchChats((c) => (c.partner?.profileId === p.profileId ? { ...c, partner: { ...c.partner, online: p.online } } : c)),
     );
-    s.on("notification", () => {
+    s.on("notification", (n: { type?: string }) => {
       unreadStore.set((u) => ({ ...u, notifications: u.notifications + 1 }));
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      // Connect requests/accepts change buttons on screen right away (requests list, profiles).
+      if (n?.type === "FRIEND_REQUEST" || n?.type === "FRIEND_ACCEPTED" || n?.type === "NEW_FOLLOWER") refreshConnections();
     });
 
     s.on("call:ring", (call: CallInfo) => {

@@ -93,6 +93,8 @@ export function PrivacyPolicy() {
           ["Microphone:", "for voice and video calls and live streaming. Asked only when you start or join a call or go live."],
           ["Modify audio settings:", "to switch call audio between the earpiece, speaker and headset during a call."],
           ["Wake lock:", "to turn the screen off when the phone is at your ear during a call, and to keep it on during calls."],
+          ["Notifications and full-screen notifications:", "to show new messages and ring for incoming calls, including on the lock screen, when the app is closed. Asked once after you sign in."],
+          ["Vibrate:", "to vibrate for incoming calls."],
           ["Internet:", "to connect to Mu services."],
         ]}
       />
@@ -134,6 +136,7 @@ export function PrivacyPolicy() {
           ["Netlify:", "hosting for the Mu web app."],
           ["Cloudflare Turnstile:", "bot protection on sign-up and sign-in."],
           ["Google Fonts:", "delivering the App's font."],
+          ["Firebase Cloud Messaging (Google):", "delivering call and message notifications to your phone. It receives a push token for your device, the sender's or caller's name, and a short preview of new messages."],
           ["MUMU RTC (operated by Cryptdox):", "real-time audio and video for calls and lives."],
         ]}
       />

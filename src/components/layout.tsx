@@ -3,11 +3,13 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Check, Home, MessageCircle, Plus, Radio, Settings, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { unreadStore } from "@/lib/realtime";
+import { callStore, unreadStore } from "@/lib/realtime";
 import { useStore } from "@/lib/store";
 import { mu } from "@/api/mu";
 import { Avatar, Name, Sheet, cx } from "./ui";
 import { IncomingCall } from "@/pages/chats/CallScreen";
+import { PullToRefresh } from "./PullToRefresh";
+import { usePhonePush } from "@/lib/push";
 
 function useBadges() {
   const chats = useQuery({ queryKey: ["chats"], queryFn: mu.chats.list });
@@ -93,6 +95,8 @@ export function AppShell() {
   const [switcher, setSwitcher] = useState(false);
   // Full-screen views on phones: an open chat, a call, a live stream.
   const immersive = /^\/(chats\/[^/]+|call|live\/[^/]+)/.test(location.pathname);
+  const inCall = !!useStore(callStore).active;
+  usePhonePush();
 
   return (
     <div className="flex h-dvh overflow-hidden">
@@ -141,6 +145,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <PullToRefresh disabled={immersive || inCall} />
         <main className="flex min-h-0 flex-1 flex-col">
           <Outlet context={{ openSwitcher: () => setSwitcher(true) }} />
         </main>

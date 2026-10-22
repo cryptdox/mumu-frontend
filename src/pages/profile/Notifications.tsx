@@ -5,9 +5,9 @@ import { Bell, Check, X } from "lucide-react";
 import { mu } from "@/api/mu";
 import type { Notification } from "@/api/types";
 import { queryClient } from "@/lib/query";
-import { unreadStore } from "@/lib/realtime";
+import { refreshConnections, unreadStore } from "@/lib/realtime";
 import { shortTime } from "@/lib/format";
-import { Avatar, Empty, ErrorNote, IconButton, Loading, cx, toastError } from "@/components/ui";
+import { Avatar, Empty, ErrorNote, IconButton, Loading, cx, toast, toastError } from "@/components/ui";
 import { TopBar } from "@/components/layout";
 
 const text: Record<Notification["type"], string> = {
@@ -40,10 +40,22 @@ function linkOf(n: Notification) {
 
 function Requests() {
   const reqs = useQuery({ queryKey: ["friend-requests"], queryFn: () => mu.connections.requests("in") });
+  type Reqs = NonNullable<typeof reqs.data>;
   const act = useMutation({
     mutationFn: ({ id, accept }: { id: string; accept: boolean }) => (accept ? mu.connections.accept(id) : mu.connections.removeFriend(id)),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["friend-requests"] }),
-    onError: toastError,
+    // The row goes away at once; it comes back only if the server says no.
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: ["friend-requests"] });
+      const before = queryClient.getQueryData<Reqs>(["friend-requests"]);
+      queryClient.setQueryData<Reqs>(["friend-requests"], (d) => d?.filter((r) => r.profile.profileId !== id));
+      return { before };
+    },
+    onSuccess: (_r, { accept }) => accept && toast("Connected"),
+    onError: (err, _v, ctx) => {
+      if (ctx?.before) queryClient.setQueryData(["friend-requests"], ctx.before);
+      toastError(err);
+    },
+    onSettled: refreshConnections,
   });
   if (!reqs.data?.length) return null;
   return (
