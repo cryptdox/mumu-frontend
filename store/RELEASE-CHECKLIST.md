@@ -1,8 +1,8 @@
 # Mu 1.0.0 — release checklist
 
 ## Build (done)
-- [x] `release/Mu-1.0.0.aab` — upload this to Play Console (signed, package **mu.cryptdox.com**, versionCode 1, versionName 1.0.0)
-- [x] `release/Mu-1.0.0.apk` — signed APK for direct installs / testing
+- [x] `release/Mu-1.0.1.aab` — upload this to Play Console (signed, package **mu.cryptdox.com**, versionCode 2, versionName 1.0.1)
+- [x] `release/Mu-1.0.1.apk` — signed APK for direct installs / testing
 - App loads **https://mu.cryptdox.com**; signing key: `android/mumu-release.jks` + `android/keystore.properties`
 
 ## Before uploading — required

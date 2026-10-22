@@ -1,4 +1,4 @@
-# Mu — Google Play listing (v1.0.0)
+# Mu — Google Play listing (v1.0.1)
 
 **App name** (≤ 30): Mu: Chat, Call & Go Live
 **Package**: mu.cryptdox.com
@@ -17,7 +17,9 @@ Mu is the messaging and social app built for providers — shops, restaurants, s
 • A dedicated inbox for your business: answer customers, send photos, reply to messages
 • Group chats for your team, suppliers or clubs
 • Read receipts, typing indicators and online status
-• Voice and video calls, one-to-one or in groups
+• Voice and video calls, one-to-one or in groups — your phone rings even when Mu is closed
+• Message notifications with a preview; tap to jump straight into the chat
+• Switch between speaker and earpiece during calls
 
 📣 SHARE WHAT'S NEW
 • Short posts with a photo
@@ -42,8 +44,13 @@ Mu is the messaging and social app built for providers — shops, restaurants, s
 
 Mu works on phones and on the web at mu.cryptdox.com.
 
-## What's new (release notes)
-First release of Mu: chats, voice and video calls, posts, live streaming with comments and reactions, provider profiles and connections.
+## What's new (release notes, ≤ 500)
+First release of Mu:
+• Chats, voice and video calls, posts and live streaming
+• Calls ring your phone and messages notify you, even when the app is closed
+• Speaker / earpiece switch during calls
+• Pull down to refresh
+• Provider profiles, connections and followers
 
 ## Graphics (in this folder)
 | Asset | File | Spec |
